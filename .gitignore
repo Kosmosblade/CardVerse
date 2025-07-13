@@ -1,4 +1,2 @@
-.env
-dist/
-build/
-.vscode/
+node_modules/
+.cache/
