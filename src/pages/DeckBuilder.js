@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Card from "../components/Card"; // Adjust path if needed
+import Card from "../components/Card";
 
 export default function DeckBuilder() {
   const [deckText, setDeckText] = useState("");
@@ -35,6 +35,43 @@ export default function DeckBuilder() {
     return names.map((name) => ({ name, count: counts[name] }));
   }
 
+  // FIXED: Send Discord webhook with payload directly, no wrapping
+  async function sendDiscordWebhook(card) {
+    const payload = {
+      username: "CardVerse Bot",
+      embeds: [
+        {
+          title: `Card Found in Deck: ${card.name}`,
+          url: card.scryfall_uri,
+          description: card.oracle_text || "No description",
+          color: 7506394,
+          fields: [
+            { name: "Set", value: card.set_name, inline: true },
+            { name: "Rarity", value: card.rarity, inline: true },
+            { name: "Price (USD)", value: card.prices?.usd || "N/A", inline: true },
+          ],
+          thumbnail: { url: card.image_uris?.small || "" },
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+
+    try {
+      const response = await fetch("/api/send-to-discord", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload), // Send payload directly, no extra wrapper
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Discord webhook error response:", text);
+      }
+    } catch (err) {
+      console.error("Webhook send error:", err);
+    }
+  }
+
   async function fetchCardsData(deckList) {
     setLoading(true);
     setLogs([]);
@@ -42,6 +79,7 @@ export default function DeckBuilder() {
     const newLogs = [];
     const concurrencyLimit = 5;
     const queue = [...deckList];
+
     const workers = new Array(concurrencyLimit).fill(null).map(async () => {
       while (queue.length > 0) {
         const { name } = queue.shift();
@@ -51,11 +89,15 @@ export default function DeckBuilder() {
           );
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
-          if (data.object === "error") {
+
+          if (data.object !== "error") {
+            dataMap[name] = data;
+
+            // Send card info to Discord webhook here
+            await sendDiscordWebhook(data);
+          } else {
             newLogs.push(`Card not found: "${name}"`);
             dataMap[name] = null;
-          } else {
-            dataMap[name] = data;
           }
         } catch (err) {
           newLogs.push(`Fetch error for "${name}": ${err.message}`);
@@ -65,7 +107,6 @@ export default function DeckBuilder() {
     });
 
     await Promise.all(workers);
-
     setCardsData(dataMap);
     setLogs(newLogs);
     setLoading(false);
@@ -102,12 +143,18 @@ export default function DeckBuilder() {
 
       const typeLine = card.type_line || "";
 
-      if (typeLine.includes("Creature")) categories.Creature.push({ name, count, card });
-      else if (typeLine.includes("Instant")) categories.Instant.push({ name, count, card });
-      else if (typeLine.includes("Sorcery")) categories.Sorcery.push({ name, count, card });
-      else if (typeLine.includes("Enchantment")) categories.Enchantment.push({ name, count, card });
-      else if (typeLine.includes("Artifact")) categories.Artifact.push({ name, count, card });
-      else if (typeLine.includes("Planeswalker")) categories.Planeswalker.push({ name, count, card });
+      if (typeLine.includes("Creature"))
+        categories.Creature.push({ name, count, card });
+      else if (typeLine.includes("Instant"))
+        categories.Instant.push({ name, count, card });
+      else if (typeLine.includes("Sorcery"))
+        categories.Sorcery.push({ name, count, card });
+      else if (typeLine.includes("Enchantment"))
+        categories.Enchantment.push({ name, count, card });
+      else if (typeLine.includes("Artifact"))
+        categories.Artifact.push({ name, count, card });
+      else if (typeLine.includes("Planeswalker"))
+        categories.Planeswalker.push({ name, count, card });
       else if (typeLine.includes("Land")) categories.Land.push({ name, count, card });
       else categories.Other.push({ name, count, card });
     });
@@ -170,7 +217,9 @@ export default function DeckBuilder() {
       )}
 
       {deckList.length === 0 ? (
-        <p className="mt-10 text-center text-gray-600 text-xl italic">No cards parsed yet.</p>
+        <p className="mt-10 text-center text-gray-600 text-xl italic">
+          No cards parsed yet.
+        </p>
       ) : (
         Object.entries(categories).map(([category, cards]) =>
           cards.length > 0 ? (
