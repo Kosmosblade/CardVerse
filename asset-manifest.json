@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/CardVerse/static/css/main.fd0d651b.css",
-    "main.js": "/CardVerse/static/js/main.90a4d752.js",
+    "main.js": "/CardVerse/static/js/main.d4099cff.js",
     "static/js/453.d820d362.chunk.js": "/CardVerse/static/js/453.d820d362.chunk.js",
     "index.html": "/CardVerse/index.html",
     "main.fd0d651b.css.map": "/CardVerse/static/css/main.fd0d651b.css.map",
-    "main.90a4d752.js.map": "/CardVerse/static/js/main.90a4d752.js.map",
+    "main.d4099cff.js.map": "/CardVerse/static/js/main.d4099cff.js.map",
     "453.d820d362.chunk.js.map": "/CardVerse/static/js/453.d820d362.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.fd0d651b.css",
-    "static/js/main.90a4d752.js"
+    "static/js/main.d4099cff.js"
   ]
 }
