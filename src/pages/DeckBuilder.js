@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Card from "../components/Card"; // Adjust path if needed
 
 export default function DeckBuilder() {
   const [deckText, setDeckText] = useState("");
@@ -6,7 +7,6 @@ export default function DeckBuilder() {
   const [cardsData, setCardsData] = useState({});
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [hoveredCardName, setHoveredCardName] = useState(null);
 
   function parseDeck(text) {
     const lines = text
@@ -116,7 +116,6 @@ export default function DeckBuilder() {
   }
 
   const categories = categorizeCards();
-  const fallbackImage = "https://via.placeholder.com/223x310?text=No+Image";
 
   return (
     <div className="max-w-7xl mx-auto p-6 bg-gray-100 rounded-lg shadow-xl">
@@ -183,145 +182,12 @@ export default function DeckBuilder() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
                   gap: "24px",
                 }}
               >
                 {cards.map(({ name, count, card }) => (
-                  <div
-                    key={name}
-                    style={{
-                      position: "relative",
-                      backgroundColor: "white",
-                      borderRadius: 12,
-                      boxShadow:
-                        "0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05)",
-                      padding: 8,
-                      cursor: "default",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      userSelect: "none",
-                    }}
-                    title={`${count}x ${name}`}
-                  >
-                    <div
-                      onMouseEnter={() => setHoveredCardName(name)}
-                      onMouseLeave={() => setHoveredCardName(null)}
-                      style={{ position: "relative", width: "100%", borderRadius: 10, overflow: "hidden" }}
-                    >
-                      <img
-                        src={
-                          card?.image_uris?.normal ||
-                          card?.card_faces?.[0]?.image_uris?.normal ||
-                          fallbackImage
-                        }
-                        alt={name}
-                        style={{
-                          width: "100%",
-                          borderRadius: 10,
-                          boxShadow: "0 8px 12px rgba(0,0,0,0.15)",
-                          transition: "transform 0.3s ease",
-                          transform:
-                            hoveredCardName === name ? "scale(1.06)" : "scale(1)",
-                          display: "block",
-                        }}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = fallbackImage;
-                        }}
-                      />
-
-                      {/* Tooltip */}
-                      {hoveredCardName === name && card && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "50%",
-                            left: "105%",
-                            transform: "translateY(-50%)",
-                            backgroundColor: "white",
-                            borderRadius: 12,
-                            padding: 16,
-                            boxShadow:
-                              "0 12px 24px rgba(0,0,0,0.15)",
-                            width: 320,
-                            zIndex: 9999,
-                            fontSize: 14,
-                            color: "#1e40af",
-                            pointerEvents: "none",
-                            userSelect: "none",
-                          }}
-                        >
-                          <div style={{ fontWeight: "700", fontSize: 18, marginBottom: 6 }}>
-                            {card.name}
-                          </div>
-                          <div><strong>Set:</strong> {card.set_name || "N/A"}</div>
-                          <div><strong>Price (USD):</strong> {card.prices?.usd ?? "N/A"}</div>
-                          <div><strong>Mana Cost:</strong> {card.mana_cost || "N/A"}</div>
-                          <div><strong>Type:</strong> {card.type_line || "N/A"}</div>
-                          <div
-                            style={{
-                              maxHeight: 60,
-                              overflowY: "auto",
-                              marginTop: 4,
-                              whiteSpace: "pre-wrap",
-                              lineHeight: 1.3,
-                            }}
-                          >
-                            <strong>Oracle Text:</strong>{" "}
-                            {card.oracle_text
-                              ? card.oracle_text.length > 200
-                                ? card.oracle_text.slice(0, 200) + "..."
-                                : card.oracle_text
-                              : "N/A"}
-                          </div>
-                          <div><strong>Rarity:</strong> {card.rarity || "N/A"}</div>
-                          <div><strong>Artist:</strong> {card.artist || "N/A"}</div>
-
-                          {/* Tooltip arrow */}
-                          <div
-                            style={{
-                              position: "absolute",
-                              top: "50%",
-                              left: "-12px",
-                              marginTop: "-6px",
-                              width: 0,
-                              height: 0,
-                              borderTop: "6px solid transparent",
-                              borderBottom: "6px solid transparent",
-                              borderRight: "12px solid white",
-                              filter: "drop-shadow(-1px 0 1px rgba(0,0,0,0.1))",
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontWeight: 600,
-                        fontSize: 16,
-                        color: "#3730a3",
-                        textAlign: "center",
-                        userSelect: "text",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {name}
-                    </div>
-                    <div
-                      style={{
-                        color: "#4f46e5",
-                        fontWeight: "500",
-                        fontSize: 14,
-                        marginTop: 4,
-                      }}
-                    >
-                      x{count}
-                    </div>
-                  </div>
+                  <Card key={name} card={card} count={count} />
                 ))}
               </div>
             </section>
