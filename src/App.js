@@ -7,10 +7,43 @@ import SearchPage from './pages/SearchPage';
 import SearchBar from './components/SearchBar';
 import Card from './components/Card';
 import './styles/Background.css';
+import cardCatalog from '../data/mtgCardCatalog.json';
 
 export default function App() {
   const [query, setQuery] = React.useState('');
   const [cards, setCards] = React.useState([]);
+
+  // Function to send card info to your webhook-proxy server
+  async function sendDiscordWebhook(card) {
+    const content = {
+      username: "CardVerse Bot",
+      embeds: [
+        {
+          title: `Card Searched: ${card.name}`,
+          url: card.scryfall_uri,
+          description: card.oracle_text || 'No description',
+          color: 7506394,
+          fields: [
+            { name: 'Set', value: card.set_name, inline: true },
+            { name: 'Rarity', value: card.rarity, inline: true },
+            { name: 'Price (USD)', value: card.prices?.usd || 'N/A', inline: true },
+          ],
+          thumbnail: { url: card.image_uris?.small || '' },
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+
+    try {
+      await fetch("http://localhost:5001/send-to-discord", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(content), // ✅ send correct shape
+      });
+    } catch (err) {
+      console.error("Webhook send error:", err);
+    }
+  }
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -27,6 +60,9 @@ export default function App() {
         return;
       }
       setCards([data]);
+
+      // Send card info to webhook
+      sendDiscordWebhook(data);
     } catch (error) {
       alert('Error fetching card data');
       console.error(error);
