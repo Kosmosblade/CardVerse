@@ -7,7 +7,7 @@ import SearchPage from './pages/SearchPage';
 import SearchBar from './components/SearchBar';
 import Card from './components/Card';
 import './styles/Background.css';
-import cardCatalog from '../data/mtgCardCatalog.json';
+import cardCatalog from './data/mtgCardCatalog.json';
 
 export default function App() {
   const [query, setQuery] = React.useState('');
@@ -35,10 +35,10 @@ export default function App() {
     };
 
     try {
-      await fetch("http://localhost:5001/send-to-discord", {
+      await fetch("/api/send-to-discord", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(content), // ✅ send correct shape
+        body: JSON.stringify({ content }), // ✅ Fixed: wrap in { content }
       });
     } catch (err) {
       console.error("Webhook send error:", err);
