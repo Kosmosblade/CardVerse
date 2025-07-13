@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/CardVerse/static/css/main.96830d73.css",
-    "main.js": "/CardVerse/static/js/main.84d1aa1f.js",
-    "static/js/453.d820d362.chunk.js": "/CardVerse/static/js/453.d820d362.chunk.js",
-    "index.html": "/CardVerse/index.html",
-    "main.96830d73.css.map": "/CardVerse/static/css/main.96830d73.css.map",
-    "main.84d1aa1f.js.map": "/CardVerse/static/js/main.84d1aa1f.js.map",
-    "453.d820d362.chunk.js.map": "/CardVerse/static/js/453.d820d362.chunk.js.map"
+    "main.css": "/static/css/main.7493939c.css",
+    "main.js": "/static/js/main.355a1401.js",
+    "static/js/453.d820d362.chunk.js": "/static/js/453.d820d362.chunk.js",
+    "index.html": "/index.html",
+    "main.7493939c.css.map": "/static/css/main.7493939c.css.map",
+    "main.355a1401.js.map": "/static/js/main.355a1401.js.map",
+    "453.d820d362.chunk.js.map": "/static/js/453.d820d362.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.96830d73.css",
-    "static/js/main.84d1aa1f.js"
+    "static/css/main.7493939c.css",
+    "static/js/main.355a1401.js"
   ]
 }
