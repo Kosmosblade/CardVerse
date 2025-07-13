@@ -53,7 +53,7 @@ export default function App() {
           {/* Logo */}
           <div className="flex items-center gap-3 mb-4">
             <img
-              src="/assets/logo.png"
+              src={`${process.env.PUBLIC_URL}/assets/logo.png`}
               alt="CardVerse Logo"
               className="h-10 w-auto drop-shadow-md"
             />
