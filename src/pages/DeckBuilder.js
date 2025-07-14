@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Card from "../components/Card";
+import Card from "../components/Card"; // Ensure this path is correct
 
 export default function DeckBuilder() {
   const [deckText, setDeckText] = useState("");
@@ -35,7 +35,6 @@ export default function DeckBuilder() {
     return names.map((name) => ({ name, count: counts[name] }));
   }
 
-  // FIXED: Send Discord webhook with payload directly, no wrapping
   async function sendDiscordWebhook(card) {
     const payload = {
       username: "CardVerse Bot",
@@ -60,7 +59,7 @@ export default function DeckBuilder() {
       const response = await fetch("/api/send-to-discord", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload), // Send payload directly, no extra wrapper
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -92,8 +91,6 @@ export default function DeckBuilder() {
 
           if (data.object !== "error") {
             dataMap[name] = data;
-
-            // Send card info to Discord webhook here
             await sendDiscordWebhook(data);
           } else {
             newLogs.push(`Card not found: "${name}"`);
@@ -155,7 +152,8 @@ export default function DeckBuilder() {
         categories.Artifact.push({ name, count, card });
       else if (typeLine.includes("Planeswalker"))
         categories.Planeswalker.push({ name, count, card });
-      else if (typeLine.includes("Land")) categories.Land.push({ name, count, card });
+      else if (typeLine.includes("Land"))
+        categories.Land.push({ name, count, card });
       else categories.Other.push({ name, count, card });
     });
 
