@@ -12,7 +12,7 @@ import SearchBar from './components/SearchBar';
 import Card from './components/Card';
 import './styles/Background.css';
 import CardDetail from './pages/CardDetail';
-
+import CardPrints from './components/CardPrints';  // Corrected import
 
 export default function App() {
   const [query, setQuery] = useState('');
@@ -139,7 +139,8 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/card/:id" element={<CardDetail />} />
-                    <Route path="*" element={<div className="text-center text-gray-300 text-xl mt-10">Page not found</div>} />
+          <Route path="/card-prints" element={<CardPrints />} /> {/* Route for View Prints */}
+          <Route path="*" element={<div className="text-center text-gray-300 text-xl mt-10">Page not found</div>} />
         </Routes>
       </main>
 

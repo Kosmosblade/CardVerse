@@ -15,8 +15,8 @@ export default function Card({ card, count = 1 }) {
   }
 
   const oracleText = card.oracle_text || 'No oracle text available';
-  const price = card.prices?.usd ? parseFloat(card.prices.usd).toFixed(2) : null;
-  const colors = card.color_identity.length ? card.color_identity.join(", ") : "N/A";
+  const price = card.prices?.usd ? parseFloat(card.prices.usd).toFixed(2) : 'N/A'; // Handle price fallback
+  const colors = card.color_identity?.length ? card.color_identity.join(", ") : "N/A"; // Ensure safe access
 
   return (
     <Link
@@ -24,7 +24,8 @@ export default function Card({ card, count = 1 }) {
       state={{ card }}
       className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition duration-300 p-4 flex flex-col items-center text-center border border-gray-200 dark:border-gray-700 cursor-pointer select-text"
     >
-      {(card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal) && (
+      {/* Image Handling */}
+      {(card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal) ? (
         <img
           src={card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal}
           alt={card.name}
@@ -35,6 +36,10 @@ export default function Card({ card, count = 1 }) {
             e.target.src = "https://via.placeholder.com/223x310?text=No+Image";
           }}
         />
+      ) : (
+        <div className="h-44 w-full bg-gray-200 rounded-md mb-4 flex items-center justify-center text-gray-400">
+          No Image Available
+        </div>
       )}
 
       <h2 className="text-xl font-bold text-gray-900 dark:text-white">{card.name}</h2>
@@ -42,7 +47,7 @@ export default function Card({ card, count = 1 }) {
         {card.set_name} • {card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)}
       </p>
 
-      {price && (
+      {price !== 'N/A' && (
         <p className="mt-2 text-emerald-500 font-semibold text-lg">
           ${price}
         </p>
@@ -63,7 +68,8 @@ export default function Card({ card, count = 1 }) {
         {oracleText}
       </p>
 
-      <div className="text-indigo-600 font-semibold mt-2">x{count}</div>
+      {/* Handling count display */}
+      <div className="text-indigo-600 font-semibold mt-2">x{count || 0}</div>
     </Link>
   );
 }

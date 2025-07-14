@@ -20,6 +20,9 @@ export default function CardDetail() {
     );
   }
 
+  console.log("Card data: ", card); // Log to verify card data
+  console.log("prints_search_uri: ", card?.prints_search_uri); // Log prints_search_uri
+
   const image =
     card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || 'https://via.placeholder.com/223x310?text=No+Image';
   const oracleText = card.oracle_text || card.card_faces?.map(face => face.oracle_text).join('\n\n') || 'No description available.';
@@ -35,6 +38,13 @@ export default function CardDetail() {
         .sort((a, b) => a.format.localeCompare(b.format))
     : [];
 
+  // Handle the view prints button click
+  const handleViewPrints = () => {
+    // Log the card data before navigating to ensure proper state
+    console.log("Navigating to View Prints with card:", card);
+    navigate('/card-prints', { state: { card } });
+  };
+
   return (
     <div className="max-w-6xl mx-auto mt-12 px-6 py-8 bg-[#112b4a] text-white rounded-xl shadow-2xl">
       <div className="flex flex-col lg:flex-row gap-10">
@@ -44,6 +54,10 @@ export default function CardDetail() {
             src={image}
             alt={card.name}
             className="w-[280px] rounded-lg shadow-lg border border-blue-800"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://via.placeholder.com/223x310?text=No+Image';
+            }}
           />
         </div>
 
@@ -67,6 +81,7 @@ export default function CardDetail() {
             <p className="whitespace-pre-wrap text-blue-100 text-sm">{oracleText}</p>
           </div>
 
+          {/* Formats Legality */}
           {legalityList.length > 0 && (
             <div className="mt-6">
               <p className="font-semibold text-indigo-300">Format Legalities:</p>
@@ -89,12 +104,25 @@ export default function CardDetail() {
             </div>
           )}
 
-          <button
-            onClick={() => navigate(-1)}
-            className="mt-6 inline-block bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded"
-          >
-            Back to Search
-          </button>
+          {/* Buttons */}
+          <div className="mt-6 flex gap-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+            >
+              Back to Search
+            </button>
+
+            {/* Conditional button visibility */}
+            {card?.prints_search_uri && (
+              <button
+                onClick={handleViewPrints}
+                className="px-4 py-2 bg-pink-600 text-white font-bold rounded-full shadow-lg hover:bg-pink-700 transition-all duration-300"
+              >
+                View Prints
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

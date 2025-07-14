@@ -1,0 +1,125 @@
+import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+export default function CardDetail() {
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const card = state?.card;
+
+  const [prints, setPrints] = useState([]);
+  const [loadingPrints, setLoadingPrints] = useState(false);
+
+  if (!card) {
+    return (
+      <div className="text-center mt-20 text-gray-300">
+        <p>Card data not found.</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  const price = card.prices?.usd ? `$${parseFloat(card.prices.usd).toFixed(2)}` : 'N/A';
+  const image = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal;
+
+  const handleViewPrints = async () => {
+    if (!card.prints_search_uri) return;
+    setLoadingPrints(true);
+    try {
+      const res = await fetch(card.prints_search_uri);
+      const data = await res.json();
+      if (data.data) {
+        setPrints(data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching prints:", err);
+    } finally {
+      setLoadingPrints(false);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto mt-12 p-6 bg-[#112b4a] text-white rounded-xl shadow-xl">
+      <div className="flex flex-col md:flex-row gap-6 items-center">
+        <img
+          src={image}
+          alt={card.name}
+          className="w-72 rounded-lg shadow-lg"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "https://via.placeholder.com/223x310?text=No+Image";
+          }}
+        />
+
+        <div className="flex-1 space-y-4">
+          <h2 className="text-3xl font-bold">{card.name}</h2>
+          <p className="text-sm text-blue-200">
+            {card.set_name} • {card.rarity}
+          </p>
+          <p className="text-emerald-400 font-semibold text-lg">{price}</p>
+          <p className="text-sm text-blue-100">
+            <strong>Mana Cost:</strong> {card.mana_cost || 'N/A'}
+          </p>
+          <p className="text-sm text-blue-100">
+            <strong>Colors:</strong> {card.color_identity?.join(', ') || 'N/A'}
+          </p>
+          <p className="text-sm text-blue-100 whitespace-pre-wrap">
+            {card.oracle_text || 'No description available.'}
+          </p>
+
+          {/* Back & View Prints Buttons */}
+          <div className="flex gap-4 mt-6">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+            >
+              ⬅️ Back to Search
+            </button>
+
+            <button
+              onClick={handleViewPrints}
+              className="px-4 py-2 bg-pink-600 text-white font-bold rounded-full shadow-lg hover:bg-pink-700 transition-all duration-300"
+            >
+              🔁 View Prints
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Prints Display Section */}
+      {prints.length > 0 && (
+        <div className="mt-10">
+          <h3 className="text-2xl font-bold mb-4 border-b border-blue-400 pb-2">Alternate Printings</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {prints.map((p) => (
+              <div
+                key={p.id}
+                className="bg-[#0d223f] p-2 rounded-lg text-center shadow-md hover:shadow-xl transition"
+              >
+                <img
+                  src={
+                    p.image_uris?.small ||
+                    p.card_faces?.[0]?.image_uris?.small ||
+                    'https://via.placeholder.com/150x210?text=No+Image'
+                  }
+                  alt={p.name}
+                  className="rounded-md mb-2 mx-auto"
+                />
+                <p className="text-sm text-blue-100">{p.set_name}</p>
+                <p className="text-xs text-gray-300">{p.rarity}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {loadingPrints && (
+        <div className="text-center mt-6 text-blue-200 text-sm">Loading alternate printings...</div>
+      )}
+    </div>
+  );
+}
