@@ -5,6 +5,7 @@ export default function CardDetail() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const card = state?.card;
+  const print = state?.print;  // Retrieve the print data from location state
 
   if (!card) {
     return (
@@ -20,13 +21,25 @@ export default function CardDetail() {
     );
   }
 
-  console.log("Card data: ", card); // Log to verify card data
-  console.log("prints_search_uri: ", card?.prints_search_uri); // Log prints_search_uri
+  // Log for debugging
+  console.log("Card data: ", card); 
+  console.log("Selected print data: ", print); // Log the print data
 
+  // Determine which image to display
   const image =
-    card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || 'https://via.placeholder.com/223x310?text=No+Image';
-  const oracleText = card.oracle_text || card.card_faces?.map(face => face.oracle_text).join('\n\n') || 'No description available.';
-  const price = card.prices?.usd ? `$${parseFloat(card.prices.usd).toFixed(2)}` : 'N/A';
+    print?.image_uris?.normal || 
+    print?.card_faces?.[0]?.image_uris?.normal || 
+    card.image_uris?.normal || 
+    card.card_faces?.[0]?.image_uris?.normal || 
+    'https://via.placeholder.com/223x310?text=No+Image';
+
+  // Check if print has its own oracle text, else fallback to the card's oracle text
+  const oracleText = print?.oracle_text || 
+                     card.oracle_text || 
+                     card.card_faces?.map(face => face.oracle_text).join('\n\n') || 
+                     'No description available.';
+
+  const price = print?.prices?.usd ? `$${parseFloat(print.prices.usd).toFixed(2)}` : 'N/A';
   const colors = card.color_identity?.length ? card.color_identity.join(', ') : 'Colorless';
 
   const legalityList = card.legalities
@@ -38,21 +51,14 @@ export default function CardDetail() {
         .sort((a, b) => a.format.localeCompare(b.format))
     : [];
 
-  // Handle the view prints button click
-  const handleViewPrints = () => {
-    // Log the card data before navigating to ensure proper state
-    console.log("Navigating to View Prints with card:", card);
-    navigate('/card-prints', { state: { card } });
-  };
-
   return (
     <div className="max-w-6xl mx-auto mt-12 px-6 py-8 bg-[#112b4a] text-white rounded-xl shadow-2xl">
       <div className="flex flex-col lg:flex-row gap-10">
-        {/* Card Image */}
+        {/* Card or Print Image */}
         <div className="flex-shrink-0">
           <img
             src={image}
-            alt={card.name}
+            alt={print?.name || card.name}
             className="w-[280px] rounded-lg shadow-lg border border-blue-800"
             onError={(e) => {
               e.target.onerror = null;
@@ -63,9 +69,9 @@ export default function CardDetail() {
 
         {/* Card Info */}
         <div className="flex-1 space-y-3">
-          <h1 className="text-4xl font-extrabold tracking-tight">{card.name}</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight">{print?.name || card.name}</h1>
           <p className="text-sm text-blue-200">
-            {card.set_name} • {card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)}
+            {print?.set_name || card.set_name} • {print?.rarity || card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)}
           </p>
           <p className="text-emerald-400 font-semibold text-xl">Price: {price}</p>
 
@@ -116,7 +122,7 @@ export default function CardDetail() {
             {/* Conditional button visibility */}
             {card?.prints_search_uri && (
               <button
-                onClick={handleViewPrints}
+                onClick={() => navigate('/card-prints', { state: { card } })}
                 className="px-4 py-2 bg-pink-600 text-white font-bold rounded-full shadow-lg hover:bg-pink-700 transition-all duration-300"
               >
                 View Prints

@@ -57,6 +57,12 @@ export default function CardPrints() {
     );
   }
 
+  // Handle navigating to the CardDetail page with print data
+  const handlePrintClick = (print) => {
+    // Updated the path to /card/:id (matches your App.js routing)
+    navigate(`/card/${card.id}`, { state: { card, print } });
+  };
+
   return (
     <div className="max-w-6xl mx-auto mt-12 px-6 py-8 bg-[#112b4a] text-white rounded-xl shadow-2xl">
       <div className="flex flex-col items-center">
@@ -76,7 +82,11 @@ export default function CardPrints() {
         {prints.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {prints.map((p) => (
-              <div key={p.id} className="bg-[#0d223f] p-2 rounded-lg text-center shadow-md hover:shadow-xl transition">
+              <div
+                key={p.id}
+                className="bg-[#0d223f] p-2 rounded-lg text-center shadow-md hover:shadow-xl transition cursor-pointer"
+                onClick={() => handlePrintClick(p)} // Make the print clickable
+              >
                 <img
                   src={p.image_uris?.small || p.card_faces?.[0]?.image_uris?.small || 'https://via.placeholder.com/150x210?text=No+Image'}
                   alt={p.name}
