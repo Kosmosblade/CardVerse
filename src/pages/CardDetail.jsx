@@ -8,21 +8,45 @@ export default function CardDetail() {
   const { id } = useParams();
 
   const [card, setCard] = useState(state?.card || null);
-  const [print] = useState(state?.print || null); // Removed setPrint
+  const [print] = useState(state?.print || null);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(!state?.card);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchCard = async () => {
+      setLoading(true);
+      setError(null);
+
       try {
-        const response = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(id)}`);
+        let url = '';
+
+        // UUID regex for Scryfall id
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(id)) {
+          url = `https://api.scryfall.com/cards/${id}`;
+        } else {
+          // fallback to exact name search (less reliable)
+          url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(id)}`;
+        }
+
+        const response = await fetch(url);
         const data = await response.json();
-        setCard(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching card:', error);
+
+        if (data.object === 'error') {
+          setError(data.details || 'Card not found');
+          setCard(null);
+        } else {
+          setCard(data);
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Error fetching card:', err);
+        setError('Failed to fetch card data');
+        setCard(null);
+      } finally {
         setLoading(false);
       }
     };
@@ -30,12 +54,26 @@ export default function CardDetail() {
     if (!card && id) {
       fetchCard();
     }
-  }, [card, id]);
+  }, [id, card]);
 
   if (loading) {
     return (
       <div className="text-center mt-20 text-gray-300">
         <p>Loading card data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center mt-20 text-gray-300">
+        <p>Error: {error}</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          Go Back
+        </button>
       </div>
     );
   }
@@ -100,25 +138,32 @@ export default function CardDetail() {
 
     const set_name = print?.set_name || card.set_name || null;
     const scryfall_uri = print?.scryfall_uri || card.scryfall_uri || null;
+    const scryfall_id = print?.id || card.id || null;
 
-    const { error } = await supabase.from('inventory').insert([
-      {
-        name,
-        quantity: Number(quantity),
-        image_url,
-        back_image_url,
-        set_name,
-        scryfall_uri,
-        price: numericPrice,
-      },
-    ]);
+    try {
+      const { error } = await supabase.from('inventory').insert([
+        {
+          name,
+          quantity: Number(quantity),
+          image_url,
+          back_image_url,
+          set_name,
+          scryfall_uri,
+          price: numericPrice,
+          scryfall_id,
+        },
+      ]);
 
-    if (error) {
+      if (error) {
+        setMessage({ type: 'error', text: 'Failed to add to inventory' });
+        console.error(error);
+      } else {
+        setMessage({ type: 'success', text: `${name} added to inventory!` });
+        setQuantity(1);
+      }
+    } catch (err) {
       setMessage({ type: 'error', text: 'Failed to add to inventory' });
-      console.error(error);
-    } else {
-      setMessage({ type: 'success', text: `${name} added to inventory!` });
-      setQuantity(1);
+      console.error(err);
     }
 
     setAdding(false);
@@ -143,7 +188,7 @@ export default function CardDetail() {
           <h1 className="text-4xl font-extrabold tracking-tight">{print?.name || card.name}</h1>
           <p className="text-sm text-blue-200">
             {print?.set_name || card.set_name} •{' '}
-            {print?.rarity || card.rarity?.charAt(0).toUpperCase() + card.rarity?.slice(1)}
+            {print?.rarity || (card.rarity ? card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1) : 'N/A')}
           </p>
           <p className="text-emerald-400 font-semibold text-xl">Price: {price}</p>
 
@@ -188,7 +233,7 @@ export default function CardDetail() {
                 type="number"
                 min="1"
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                onChange={(e) => setQuantity(Number(e.target.value))}
                 className="w-20 px-2 py-1 rounded border text-black"
               />
               <button

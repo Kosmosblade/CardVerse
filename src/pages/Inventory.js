@@ -82,7 +82,7 @@ export default function Inventory() {
     const { data, error } = await supabase
       .from('inventory')
       .select(
-        'id, name, quantity, price, image_url, back_image_url, set_name, scryfall_uri'
+        'id, name, quantity, price, image_url, back_image_url, set_name, scryfall_uri, scryfall_id'
       )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -146,6 +146,7 @@ export default function Inventory() {
             back_image_url,
             set_name,
             scryfall_uri,
+            scryfall_id: result.id, // <-- added this
           },
         ]);
 
@@ -182,7 +183,11 @@ export default function Inventory() {
   // Navigate to card detail page
   const handleCardClick = useCallback(
     (card) => {
-      navigate(`/card/${encodeURIComponent(card.name)}`);
+      if (card.scryfall_id) {
+        navigate(`/card/${card.scryfall_id}`);
+      } else {
+        navigate(`/card/${encodeURIComponent(card.name)}`);
+      }
     },
     [navigate]
   );
@@ -212,7 +217,10 @@ export default function Inventory() {
         className="w-[240px] bg-[#0e1d35] p-3 pt-4 border-r border-blue-900"
         style={{ pointerEvents: 'none' }} // prevent stealing hover
       >
-        <h1 className="text-xl font-bold text-center text-cyan-300 mb-4" style={{ pointerEvents: 'auto' }}>
+        <h1
+          className="text-xl font-bold text-center text-cyan-300 mb-4"
+          style={{ pointerEvents: 'auto' }}
+        >
           CardVerse
         </h1>
         {selectedCard ? (
@@ -231,10 +239,7 @@ export default function Inventory() {
                 pointerEvents: 'auto', // allow clicks on image
               }}
             />
-            <div
-              className="text-xs space-y-1"
-              style={{ pointerEvents: 'auto' }}
-            >
+            <div className="text-xs space-y-1" style={{ pointerEvents: 'auto' }}>
               <p className="font-bold">{selectedCard.name}</p>
               <p className="text-green-400">
                 Price:{' '}
