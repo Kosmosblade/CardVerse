@@ -1,11 +1,44 @@
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 export default function CardDetail() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const card = state?.card;
-  const print = state?.print;  // Retrieve the print data from location state
+  const { id } = useParams();
+
+  const [card, setCard] = useState(state?.card || null);
+  const [print] = useState(state?.print || null); // Removed setPrint
+  const [quantity, setQuantity] = useState(1);
+  const [adding, setAdding] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [loading, setLoading] = useState(!state?.card);
+
+  useEffect(() => {
+    const fetchCard = async () => {
+      try {
+        const response = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(id)}`);
+        const data = await response.json();
+        setCard(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching card:', error);
+        setLoading(false);
+      }
+    };
+
+    if (!card && id) {
+      fetchCard();
+    }
+  }, [card, id]);
+
+  if (loading) {
+    return (
+      <div className="text-center mt-20 text-gray-300">
+        <p>Loading card data...</p>
+      </div>
+    );
+  }
 
   if (!card) {
     return (
@@ -21,25 +54,22 @@ export default function CardDetail() {
     );
   }
 
-  // Log for debugging
-  console.log("Card data: ", card); 
-  console.log("Selected print data: ", print); // Log the print data
-
-  // Determine which image to display
   const image =
-    print?.image_uris?.normal || 
-    print?.card_faces?.[0]?.image_uris?.normal || 
-    card.image_uris?.normal || 
-    card.card_faces?.[0]?.image_uris?.normal || 
+    print?.image_uris?.normal ||
+    print?.card_faces?.[0]?.image_uris?.normal ||
+    card.image_uris?.normal ||
+    card.card_faces?.[0]?.image_uris?.normal ||
     'https://via.placeholder.com/223x310?text=No+Image';
 
-  // Check if print has its own oracle text, else fallback to the card's oracle text
-  const oracleText = print?.oracle_text || 
-                     card.oracle_text || 
-                     card.card_faces?.map(face => face.oracle_text).join('\n\n') || 
-                     'No description available.';
+  const oracleText =
+    print?.oracle_text ||
+    card.oracle_text ||
+    (card.card_faces ? card.card_faces.map(face => face.oracle_text).join('\n\n') : 'No description available.');
 
-  const price = print?.prices?.usd ? `$${parseFloat(print.prices.usd).toFixed(2)}` : 'N/A';
+  const rawPrice = print?.prices?.usd || card?.prices?.usd || null;
+  const price = rawPrice ? `$${parseFloat(rawPrice).toFixed(2)}` : 'N/A';
+  const numericPrice = rawPrice ? parseFloat(rawPrice) : 0;
+
   const colors = card.color_identity?.length ? card.color_identity.join(', ') : 'Colorless';
 
   const legalityList = card.legalities
@@ -51,10 +81,52 @@ export default function CardDetail() {
         .sort((a, b) => a.format.localeCompare(b.format))
     : [];
 
+  const handleAddToInventory = async () => {
+    setAdding(true);
+    setMessage(null);
+
+    const name = print?.name || card.name;
+    const image_url =
+      print?.image_uris?.normal ||
+      print?.card_faces?.[0]?.image_uris?.normal ||
+      card.image_uris?.normal ||
+      card.card_faces?.[0]?.image_uris?.normal ||
+      null;
+
+    const back_image_url =
+      print?.card_faces?.[1]?.image_uris?.normal ||
+      card.card_faces?.[1]?.image_uris?.normal ||
+      null;
+
+    const set_name = print?.set_name || card.set_name || null;
+    const scryfall_uri = print?.scryfall_uri || card.scryfall_uri || null;
+
+    const { error } = await supabase.from('inventory').insert([
+      {
+        name,
+        quantity: Number(quantity),
+        image_url,
+        back_image_url,
+        set_name,
+        scryfall_uri,
+        price: numericPrice,
+      },
+    ]);
+
+    if (error) {
+      setMessage({ type: 'error', text: 'Failed to add to inventory' });
+      console.error(error);
+    } else {
+      setMessage({ type: 'success', text: `${name} added to inventory!` });
+      setQuantity(1);
+    }
+
+    setAdding(false);
+  };
+
   return (
     <div className="max-w-6xl mx-auto mt-12 px-6 py-8 bg-[#112b4a] text-white rounded-xl shadow-2xl">
       <div className="flex flex-col lg:flex-row gap-10">
-        {/* Card or Print Image */}
         <div className="flex-shrink-0">
           <img
             src={image}
@@ -67,11 +139,11 @@ export default function CardDetail() {
           />
         </div>
 
-        {/* Card Info */}
         <div className="flex-1 space-y-3">
           <h1 className="text-4xl font-extrabold tracking-tight">{print?.name || card.name}</h1>
           <p className="text-sm text-blue-200">
-            {print?.set_name || card.set_name} • {print?.rarity || card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)}
+            {print?.set_name || card.set_name} •{' '}
+            {print?.rarity || card.rarity?.charAt(0).toUpperCase() + card.rarity?.slice(1)}
           </p>
           <p className="text-emerald-400 font-semibold text-xl">Price: {price}</p>
 
@@ -87,7 +159,6 @@ export default function CardDetail() {
             <p className="whitespace-pre-wrap text-blue-100 text-sm">{oracleText}</p>
           </div>
 
-          {/* Formats Legality */}
           {legalityList.length > 0 && (
             <div className="mt-6">
               <p className="font-semibold text-indigo-300">Format Legalities:</p>
@@ -110,7 +181,35 @@ export default function CardDetail() {
             </div>
           )}
 
-          {/* Buttons */}
+          <div className="mt-6 bg-[#0b1f3a] p-4 rounded-xl shadow-inner border border-blue-900">
+            <p className="text-lg font-semibold mb-2 text-blue-200">Add to Inventory</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="w-20 px-2 py-1 rounded border text-black"
+              />
+              <button
+                onClick={handleAddToInventory}
+                disabled={adding}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded"
+              >
+                {adding ? 'Adding...' : 'Add to Inventory'}
+              </button>
+            </div>
+            {message && (
+              <p
+                className={`mt-2 text-sm ${
+                  message.type === 'success' ? 'text-green-400' : 'text-red-400'
+                }`}
+              >
+                {message.text}
+              </p>
+            )}
+          </div>
+
           <div className="mt-6 flex gap-4">
             <button
               onClick={() => navigate(-1)}
@@ -119,7 +218,6 @@ export default function CardDetail() {
               Back to Search
             </button>
 
-            {/* Conditional button visibility */}
             {card?.prints_search_uri && (
               <button
                 onClick={() => navigate('/card-prints', { state: { card } })}
