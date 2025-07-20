@@ -1,7 +1,26 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function Card({ card, count = 1 }) {
+  const [imageSrc, setImageSrc] = useState(null);
+
+  useEffect(() => {
+    if (card) {
+      const imageUrl = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal;
+      const cachedImage = localStorage.getItem(imageUrl);
+
+      if (cachedImage) {
+        setImageSrc(cachedImage); // If cached, use it
+      } else {
+        setImageSrc(imageUrl); // Otherwise, use the original URL
+      }
+    }
+  }, [card]);
+
+  const handleImageLoad = (url) => {
+    localStorage.setItem(url, url); // Save the image URL in localStorage once it's loaded
+  };
+
   if (!card) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-4 flex flex-col items-center text-center border border-gray-200">
@@ -24,9 +43,9 @@ export default function Card({ card, count = 1 }) {
       state={{ card }}
       className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition duration-300 p-4 flex flex-col items-center text-center border border-gray-200 dark:border-gray-700 cursor-pointer select-text"
     >
-      {(card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal) ? (
+      {imageSrc ? (
         <img
-          src={card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal}
+          src={imageSrc}
           alt={card.name}
           className="mb-3 rounded-md shadow-md w-full max-h-[310px] object-cover"
           loading="lazy"
@@ -35,6 +54,7 @@ export default function Card({ card, count = 1 }) {
             e.target.src = "https://via.placeholder.com/223x310?text=No+Image";
           }}
           draggable={false}
+          onLoad={() => handleImageLoad(imageSrc)} // Cache the image once loaded
         />
       ) : (
         <div className="h-44 w-full bg-gray-200 rounded-md mb-4 flex items-center justify-center text-gray-400">

@@ -1,45 +1,41 @@
-import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
+import React, { useState, useCallback, memo, useRef, useLayoutEffect, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import './Inventory.css';  // Import the CSS
+import './Inventory.css';
 
-function useDebouncedCallback(callback, delay) {
-  const timer = useRef(null);
-
-  const debouncedFn = useCallback(
-    (...args) => {
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        callback(...args);
-      }, delay);
-    },
-    [callback, delay]
-  );
-
-  useEffect(() => {
-    return () => clearTimeout(timer.current);
-  }, []);
-
-  return debouncedFn;
-}
-
-const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover }) {
-  const [flipped, setFlipped] = useState(false);
-
-  useEffect(() => {
-    setFlipped(false);
-  }, [card.id]);
-
+// Memoized CardItem component to avoid unnecessary re-renders
+const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flipped, onFlip }) {
   const frontImage = card.image_url || '/placeholder.jpg';
   const backImage = card.back_image_url || null;
   const displayedImage = flipped && backImage ? backImage : frontImage;
+
+  // Cache the images to prevent re-fetching on each render
+  const imageCache = useRef({});
+
+  const loadImage = (url) => {
+    if (!imageCache.current[url]) {
+      const img = new Image();
+      img.src = url;
+      img.onload = () => {
+        // Store the image in the cache once it's loaded
+        imageCache.current[url] = img;
+      };
+      img.onerror = () => {
+        imageCache.current[url] = null; // In case image fails to load
+      };
+    }
+  };
+
+  useEffect(() => {
+    loadImage(displayedImage);  // Cache the image when displayedImage changes
+  }, [displayedImage]);
 
   return (
     <div
       className="card-item relative group cursor-pointer"
       onClick={() => onClick(card)}
-      onMouseEnter={() => onHover(card)}
-      onMouseLeave={() => setFlipped(false)}
+      onMouseEnter={() => onHover(card)}  // Only pass card if it's valid
+      onMouseLeave={() => onHover(null)}  // Ensure null is passed when mouse leaves
     >
       {/* Delete button at top-right corner */}
       <button
@@ -55,12 +51,12 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover }) {
         </svg>
       </button>
 
-      {/* Flip button at top-left corner */}
+      {/* Flip button */}
       {backImage && (
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setFlipped((f) => !f);
+            onFlip(card.id);  // Toggle flip state on click
           }}
           className="flip-btn absolute top-2 left-2 z-20 bg-gray-800 bg-opacity-75 text-white text-xs px-2 py-1 rounded-full select-none opacity-0 group-hover:opacity-100 transition-opacity duration-150"
           aria-label={flipped ? 'Show front image' : 'Show back image'}
@@ -69,7 +65,7 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover }) {
         </button>
       )}
 
-      {/* Image container that applies the flip effect */}
+      {/* Image container */}
       <div className={`card-image-container ${flipped ? 'flipped' : ''}`}>
         <img
           src={displayedImage}
@@ -88,7 +84,31 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover }) {
       </div>
     </div>
   );
+}, (prevProps, nextProps) => {
+  // Prevent re-render unless card or flipped state changes
+  return prevProps.card.id === nextProps.card.id && prevProps.flipped === nextProps.flipped;
 });
+
+// Custom hook to debounce function calls
+function useDebouncedCallback(callback, delay) {
+  const timer = useRef(null);
+
+  const debouncedFn = useCallback(
+    (...args) => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => {
+        callback(...args);
+      }, delay);
+    },
+    [callback, delay]
+  );
+
+  useLayoutEffect(() => {
+    return () => clearTimeout(timer.current);
+  }, []);
+
+  return debouncedFn;
+}
 
 export default function Inventory() {
   const [cardName, setCardName] = useState('');
@@ -97,13 +117,15 @@ export default function Inventory() {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [selectedCard, setSelectedCard] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [flippedCards, setFlippedCards] = useState({});  // Track flipped state per card
   const navigate = useNavigate();
 
-  useEffect(() => {
+  // Fetch user on mount
+  useLayoutEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
   }, []);
 
+  // Fetch inventory for the user
   const fetchInventory = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -127,10 +149,19 @@ export default function Inventory() {
     setLoading(false);
   }, [user, selectedCard]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (user) fetchInventory();
   }, [user, fetchInventory]);
 
+  // Handle flip toggle
+  const handleFlip = useCallback((cardId) => {
+    setFlippedCards((prevFlippedCards) => ({
+      ...prevFlippedCards,
+      [cardId]: !prevFlippedCards[cardId],  // Toggle the flipped state
+    }));
+  }, []);  // Ensure it doesn't depend on any changing variables
+
+  // Add card to inventory
   const handleAdd = useCallback(
     async (e) => {
       e.preventDefault();
@@ -143,9 +174,7 @@ export default function Inventory() {
 
       try {
         const response = await fetch(
-          `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(
-            cardName.trim()
-          )}`
+          `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName.trim())}`
         );
         const result = await response.json();
 
@@ -175,7 +204,6 @@ export default function Inventory() {
           scryfall_id: result.id,
         }]);
 
-
         if (error) {
           console.error(error);
           alert('Failed to add card');
@@ -192,6 +220,7 @@ export default function Inventory() {
     [cardName, quantity, user, fetchInventory]
   );
 
+  // Delete card from inventory
   const handleDelete = useCallback(
     async (id) => {
       const { error } = await supabase.from('inventory').delete().eq('id', id);
@@ -205,6 +234,7 @@ export default function Inventory() {
     [selectedCard, fetchInventory]
   );
 
+  // Handle card click
   const handleCardClick = useCallback(
     (card) => {
       if (card.scryfall_id) {
@@ -216,6 +246,7 @@ export default function Inventory() {
     [navigate]
   );
 
+  // Debounced hover to reduce state changes
   const debouncedSetSelectedCard = useDebouncedCallback(
     (card) => {
       if (selectedCard?.id !== card.id) {
@@ -225,19 +256,34 @@ export default function Inventory() {
     100
   );
 
+  // Hover handler to trigger card selection
   const handleHover = useCallback(
     (card) => {
-      debouncedSetSelectedCard(card);
+      if (card) {  // Ensure card is not null before updating state
+        debouncedSetSelectedCard(card);
+      }
     },
     [debouncedSetSelectedCard]
   );
 
+  const inventoryGrid = useMemo(() => (
+    inventory.map((card) => (
+      <CardItem
+        key={card.id}
+        card={card}
+        onClick={handleCardClick}
+        onDelete={handleDelete}
+        onHover={handleHover}
+        flipped={flippedCards[card.id]}  // Pass flipped state for each card
+        onFlip={handleFlip}  // Pass flip handler
+      />
+    ))
+  ), [inventory, flippedCards, handleCardClick, handleDelete, handleHover, handleFlip]);
+
   return (
     <div className="flex h-screen bg-[#0a1528] text-white relative">
-      {/* Sidebar */}
-      <div
-        className="w-[240px] bg-[#0e1d35] p-3 pt-4 border-r border-blue-900 flex flex-col items-center"
-      >
+      {/* Sidebar for card preview */}
+      <div className="w-[240px] bg-[#0e1d35] p-3 pt-4 border-r border-blue-900 flex flex-col items-center">
         <h1 className="text-xl font-bold text-center text-cyan-300 mb-4">
           CardVerse
         </h1>
@@ -326,46 +372,7 @@ export default function Inventory() {
               No cards in inventory.
             </p>
           ) : (
-            inventory.map((card) => (
-              <CardItem
-                key={card.id}
-                card={card}
-                onClick={handleCardClick}
-                onDelete={handleDelete}
-                onHover={handleHover}
-              />
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Menu */}
-      <div className="fixed top-1/2 right-0 transform -translate-y-1/2 z-50">
-        <div
-          className="bg-blue-700 p-2 rounded-l cursor-pointer"
-          onMouseEnter={() => setMenuOpen(true)}
-          onMouseLeave={() => setMenuOpen(false)}
-        >
-          <img src="/menu-icon.png" alt="Menu" className="w-6 h-6" />
-          {menuOpen && (
-            <div className="absolute right-12 top-0 w-48 bg-[#1b2e4b] text-white p-4 rounded shadow-xl space-y-2">
-              <p className="font-bold text-sm">Navigation</p>
-              <a href="/" className="block hover:underline text-sm">
-                Home
-              </a>
-              <a href="/inventory" className="block hover:underline text-sm">
-                Inventory
-              </a>
-              <a href="/decks" className="block hover:underline text-sm">
-                Decks
-              </a>
-              <a href="/profile" className="block hover:underline text-sm">
-                Profile
-              </a>
-              <a href="/logout" className="block hover:underline text-sm">
-                Logout
-              </a>
-            </div>
+            inventoryGrid
           )}
         </div>
       </div>

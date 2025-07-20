@@ -47,3 +47,68 @@ button.absolute.top-1.right-1 {
   -moz-transform-style: preserve-3d;
   -ms-transform-style: preserve-3d;
 }
+
+/* === Mobile Responsive Styles === */
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+    padding: 0 10px;
+  }
+
+  .card-item {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .card-item .card-image {
+    width: 100%;
+    height: auto;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  /* Inventory Section */
+  .inventory-container {
+    padding: 10px;
+  }
+
+  /* Adjust grid for mobile */
+  .grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr); /* Stacked on small screens */
+  }
+
+  .grid-cols-5 {
+    grid-template-columns: repeat(2, 1fr); /* Stacked on small screens */
+  }
+}
+
+@media (max-width: 768px) {
+  /* Larger tablet screens */
+  .grid-cols-2 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid-cols-4 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid-cols-5 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+

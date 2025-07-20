@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+// Correct paths for your styles
+import '../styles/Background.css'; 
+
 export default function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
@@ -10,89 +13,88 @@ export default function NavBar() {
     { name: 'My Decks', to: '/decks' },
     { name: 'Inventory', to: '/inventory' },
     { name: 'About', to: '/about' },
+    { name: 'Login', to: '/login' },
+    { name: 'Signup', to: '/signup' },
+    { name: 'Profile', to: '/profile' },
+    { name: 'Logout', to: '/logout' },
   ];
 
   return (
-    <header className="bg-white/90 backdrop-blur border-b shadow-md sticky top-0 z-50">
-      <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-3">
-          <img
-            src="/assets/logo.png"
-            alt="CardVerse Logo"
-            className="h-12 w-auto drop-shadow-md"
-          />
-          <span className="text-3xl font-extrabold text-blue-600 tracking-wide select-none">
-            Card<span className="text-indigo-500">Verse</span>
-          </span>
-        </Link>
-
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex space-x-8 font-medium text-lg text-gray-700">
-          {links.map(({ name, to }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`hover:text-blue-600 transition duration-200 ${
-                location.pathname === to ? 'text-blue-600 font-bold' : ''
-              }`}
-            >
-              {name}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Mobile Hamburger */}
+    <div>
+      {/* Floating button to open the nav */}
+      {!menuOpen && (
         <button
-          className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
           onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
+          className="fixed right-4 bottom-4 z-50 p-0 bg-transparent border-none focus:outline-none"
+          aria-label="Open Menu"
         >
-          <svg
-            className="h-6 w-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <img 
+            src={`${process.env.PUBLIC_URL}/assets/menu-icon.png`} 
+            alt="Menu Icon" 
+            className="w-8 h-8 object-cover"
+            onError={(e) => e.target.src = '/assets/default-icon.png'} // Fallback image
+          />
+        </button>
+      )}
+
+      {/* Slide-out Navbar */}
+      <nav
+        className={`fixed top-0 right-0 h-full w-64 shadow-lg transform ${menuOpen ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300`}
+        style={{
+          backgroundImage: `url(${process.env.PUBLIC_URL}/assets/navbar-background.png)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundColor: 'rgba(0, 0, 0, 0.4)', // Add subtle dark overlay for better contrast
+        }}
+      >
+        <div className="flex items-center justify-between px-6 py-4">
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src={`${process.env.PUBLIC_URL}/assets/logo.png`} 
+              alt="CardVerse Logo"
+              className="h-12 w-auto drop-shadow-md"
+            />
+            <span className="text-3xl font-extrabold text-white tracking-wide select-none">
+              Card<span className="text-indigo-500">Verse</span>
+            </span>
+          </Link>
+
+          {/* Close button (X) */}
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="text-white hover:bg-gray-200 p-2 rounded-md md:hidden"
           >
-            {menuOpen ? (
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M6 18L18 6M6 6l12 12"
               />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            )}
-          </svg>
-        </button>
-      </div>
+            </svg>
+          </button>
+        </div>
 
-      {/* Mobile Menu */}
-      {menuOpen && (
-        <nav className="md:hidden bg-white border-t border-gray-200 shadow-inner">
-          <ul className="flex flex-col space-y-2 py-4 px-6 text-gray-700 font-medium">
-            {links.map(({ name, to }) => (
-              <li key={to}>
-                <Link
-                  to={to}
-                  onClick={() => setMenuOpen(false)}
-                  className={`block hover:text-blue-600 transition duration-200 ${
-                    location.pathname === to ? 'text-blue-600 font-bold' : ''
-                  }`}
-                >
-                  {name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
-    </header>
+        <ul className="flex flex-col space-y-4 px-6 py-2">
+          {links.map(({ name, to }) => (
+            <li key={to}>
+              <Link
+                to={to}
+                onClick={() => setMenuOpen(false)}
+                className={`text-lg font-medium text-gray-200 hover:text-indigo-500 transition duration-200 ${location.pathname === to ? 'text-indigo-500 font-bold' : ''} hover:underline hover:underline-offset-4`}
+              >
+                {name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
   );
 }

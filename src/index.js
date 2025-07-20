@@ -9,8 +9,9 @@ import reportWebVitals from './reportWebVitals';
 import { AuthProvider } from './context/AuthContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
 root.render(
-  // Temporarily remove React.StrictMode
+  // Wrap the App with both BrowserRouter and AuthProvider
   <AuthProvider>
     <BrowserRouter>
       <App />

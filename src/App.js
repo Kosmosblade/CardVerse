@@ -1,5 +1,6 @@
+// src/App.js
 import React, { useState } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import DeckBuilder from './pages/DeckBuilder';
 import Inventory from './pages/Inventory';
 import SearchPage from './pages/SearchPage';
@@ -12,8 +13,10 @@ import SearchBar from './components/SearchBar';
 import Card from './components/Card';
 import './styles/Background.css';
 import CardDetail from './pages/CardDetail';
-import CardPrints from './components/CardPrints';  // Corrected import
+import CardPrints from './components/CardPrints';
+import NavBar from './components/NavBar'; // Ensure the NavBar is imported
 
+// The App function
 export default function App() {
   const [query, setQuery] = useState('');
   const [cards, setCards] = useState([]);
@@ -82,39 +85,15 @@ export default function App() {
       />
       <div className="background-overlay" />
 
+      {/* Navbar - This should be at the top */}
+      <NavBar />
+
       {/* Search bar (only on homepage) */}
       {location.pathname === '/' && (
         <div className="absolute top-4 left-4 z-50">
           <SearchBar query={query} setQuery={setQuery} handleSearch={handleSearch} />
         </div>
       )}
-
-      {/* Header */}
-      <header className="bg-[#112b4a]/90 backdrop-blur border-b shadow-md pt-36 sticky top-0 z-40 text-white">
-        <div className="max-w-screen-xl mx-auto px-6 pb-4 flex flex-col items-center">
-          <div className="flex items-center gap-3 mb-4">
-            <img
-              src={`${process.env.PUBLIC_URL}/assets/logo.png`}
-              alt="CardVerse Logo"
-              className="h-10 w-auto drop-shadow-md"
-            />
-            <span className="text-3xl font-extrabold text-blue-300 tracking-wide">
-              Card<span className="text-indigo-400">Verse</span>
-            </span>
-          </div>
-
-          <nav className="flex flex-wrap justify-center gap-8 font-medium text-lg text-blue-100">
-            <Link to="/" className="hover:text-indigo-300 transition">Browse Cards</Link>
-            <Link to="/decks" className="hover:text-indigo-300 transition">My Decks</Link>
-            <Link to="/inventory" className="hover:text-indigo-300 transition">Inventory</Link>
-            <Link to="/about" className="hover:text-indigo-300 transition">About</Link>
-            <Link to="/login" className="hover:text-green-400 transition">Login</Link>
-            <Link to="/signup" className="hover:text-green-400 transition">Sign Up</Link>
-            <Link to="/profile" className="hover:text-cyan-300 transition">Profile</Link>
-            <Link to="/logout" className="hover:text-red-400 transition">Logout</Link>
-          </nav>
-        </div>
-      </header>
 
       {/* Main content */}
       <main className="flex-grow p-6 max-w-6xl mx-auto mt-6">
