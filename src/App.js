@@ -9,12 +9,12 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import Logout from './pages/Logout';
-import SearchBar from './components/SearchBar';
 import Card from './components/Card';
 import './styles/Background.css';
 import CardDetail from './pages/CardDetail';
 import CardPrints from './components/CardPrints';
 import NavBar from './components/NavBar'; // Ensure the NavBar is imported
+import SearchBar from './components/SearchBar'; // Import SearchBar
 
 // The App function
 export default function App() {
@@ -88,15 +88,11 @@ export default function App() {
       {/* Navbar - This should be at the top */}
       <NavBar />
 
-      {/* Search bar (only on homepage) */}
-      {location.pathname === '/' && (
-        <div className="absolute top-4 left-4 z-50">
-          <SearchBar query={query} setQuery={setQuery} handleSearch={handleSearch} />
-        </div>
-      )}
+      {/* Only render SearchBar on homepage */}
+      {location.pathname === '/' && <SearchBar query={query} setQuery={setQuery} handleSearch={handleSearch} />}
 
       {/* Main content */}
-      <main className="flex-grow p-6 max-w-6xl mx-auto mt-6">
+      <main className="flex-grow p-6 max-w-6xl mx-auto mt-12"> {/* Added margin-top */}
         <Routes>
           <Route
             path="/"
@@ -118,7 +114,7 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/card/:id" element={<CardDetail />} />
-          <Route path="/card-prints" element={<CardPrints />} /> {/* Route for View Prints */}
+          <Route path="/card-prints" element={<CardPrints />} />
           <Route path="*" element={<div className="text-center text-gray-300 text-xl mt-10">Page not found</div>} />
         </Routes>
       </main>
