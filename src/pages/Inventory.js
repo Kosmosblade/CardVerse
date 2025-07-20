@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useCallback, memo, useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import './Inventory.css';
@@ -77,6 +77,7 @@ export default function Inventory() {
   const [selectedCard, setSelectedCard] = useState(null);
   const [flippedCards, setFlippedCards] = useState({});  // Track flipped state per card
   const [hoveredCard, setHoveredCard] = useState(null);  // State to track hovered card
+  const hoveredCardRef = useRef(null);  // A ref to store the last hovered card
   const navigate = useNavigate();
 
   // Fetch user on mount
@@ -118,7 +119,7 @@ export default function Inventory() {
       ...prevFlippedCards,
       [cardId]: !prevFlippedCards[cardId],  // Toggle the flipped state
     }));
-  }, []);
+  }, []);  
 
   // Add card to inventory
   const handleAdd = useCallback(
@@ -163,6 +164,7 @@ export default function Inventory() {
           scryfall_id: result.id,
         }]);
 
+
         if (error) {
           console.error(error);
           alert('Failed to add card');
@@ -205,6 +207,16 @@ export default function Inventory() {
     [navigate]
   );
 
+  // Handle hover logic to track the hovered card
+  const handleCardHover = useCallback((card) => {
+    if (card) {
+      setHoveredCard(card);  // Set hovered card if hovering
+      hoveredCardRef.current = card;  // Store in ref for last hovered card
+    } else {
+      setHoveredCard(hoveredCardRef.current);  // Keep the last hovered card when mouse leaves
+    }
+  }, []);
+
   // Inventory grid for rendering cards
   const inventoryGrid = useMemo(() => (
     inventory.map((card) => (
@@ -215,10 +227,10 @@ export default function Inventory() {
         onDelete={handleDelete}
         flipped={flippedCards[card.id]}  // Pass flipped state for each card
         onFlip={handleFlip}  // Pass flip handler
-        onHover={setHoveredCard}  // Set hovered card on mouse hover
+        onHover={handleCardHover}  // Set hovered card on mouse hover
       />
     ))
-  ), [inventory, flippedCards, handleCardClick, handleDelete, handleFlip]);
+  ), [inventory, flippedCards, handleCardClick, handleDelete, handleFlip, handleCardHover]);
 
   return (
     <div className="flex h-screen bg-[#0a1528] text-white relative">
@@ -227,7 +239,34 @@ export default function Inventory() {
         <h1 className="text-xl font-bold text-center text-cyan-300 mb-4">
           CardVerse
         </h1>
-        {selectedCard ? (
+
+        {/* Show the hovered card's info */}
+        {hoveredCard ? (
+          <>
+            <img
+              src={hoveredCard.image_url || '/placeholder.jpg'}
+              alt={hoveredCard.name}
+              className="w-full h-[260px] object-contain rounded mb-2"
+              onError={(e) => (e.target.src = '/placeholder.jpg')}
+              loading="eager"
+            />
+            <div className="text-xs space-y-1">
+              <p className="font-bold">{hoveredCard.name}</p>
+              <p className="text-green-400">
+                Price: {hoveredCard.price > 0 ? `$${hoveredCard.price.toFixed(2)}` : 'N/A'}
+              </p>
+              <p className="text-blue-300">Set: {hoveredCard.set_name}</p>
+              <a
+                href={hoveredCard.scryfall_uri}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-400 underline"
+              >
+                View on Scryfall
+              </a>
+            </div>
+          </>
+        ) : selectedCard ? (
           <>
             <img
               src={selectedCard.image_url || '/placeholder.jpg'}
@@ -239,10 +278,7 @@ export default function Inventory() {
             <div className="text-xs space-y-1">
               <p className="font-bold">{selectedCard.name}</p>
               <p className="text-green-400">
-                Price:{' '}
-                {selectedCard.price > 0
-                  ? `$${selectedCard.price.toFixed(2)}`
-                  : 'N/A'}
+                Price: {selectedCard.price > 0 ? `$${selectedCard.price.toFixed(2)}` : 'N/A'}
               </p>
               <p className="text-blue-300">Set: {selectedCard.set_name}</p>
               <a
@@ -262,6 +298,7 @@ export default function Inventory() {
 
       {/* Inventory Section */}
       <div className="flex-1 overflow-y-auto p-6">
+        {/* Add Card Form */}
         <form
           onSubmit={handleAdd}
           className="bg-[#1b2e4b] rounded-xl p-4 shadow-lg max-w-5xl mx-auto mb-6 text-sm"
@@ -297,6 +334,7 @@ export default function Inventory() {
           </div>
         </form>
 
+        {/* Inventory Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-2">
           {loading ? (
             <p className="col-span-full text-center text-blue-300">Loading...</p>
