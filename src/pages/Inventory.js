@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, useRef, useLayoutEffect, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, memo, useLayoutEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import './Inventory.css';
@@ -8,27 +8,6 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flip
   const frontImage = card.image_url || '/placeholder.jpg';
   const backImage = card.back_image_url || null;
   const displayedImage = flipped && backImage ? backImage : frontImage;
-
-  // Cache the images to prevent re-fetching on each render
-  const imageCache = useRef({});
-
-  const loadImage = (url) => {
-    if (!imageCache.current[url]) {
-      const img = new Image();
-      img.src = url;
-      img.onload = () => {
-        // Store the image in the cache once it's loaded
-        imageCache.current[url] = img;
-      };
-      img.onerror = () => {
-        imageCache.current[url] = null; // In case image fails to load
-      };
-    }
-  };
-
-  useEffect(() => {
-    loadImage(displayedImage);  // Cache the image when displayedImage changes
-  }, [displayedImage]);
 
   return (
     <div
@@ -89,27 +68,6 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flip
   return prevProps.card.id === nextProps.card.id && prevProps.flipped === nextProps.flipped;
 });
 
-// Custom hook to debounce function calls
-function useDebouncedCallback(callback, delay) {
-  const timer = useRef(null);
-
-  const debouncedFn = useCallback(
-    (...args) => {
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        callback(...args);
-      }, delay);
-    },
-    [callback, delay]
-  );
-
-  useLayoutEffect(() => {
-    return () => clearTimeout(timer.current);
-  }, []);
-
-  return debouncedFn;
-}
-
 export default function Inventory() {
   const [cardName, setCardName] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -118,6 +76,7 @@ export default function Inventory() {
   const [user, setUser] = useState(null);
   const [selectedCard, setSelectedCard] = useState(null);
   const [flippedCards, setFlippedCards] = useState({});  // Track flipped state per card
+  const [hoveredCard, setHoveredCard] = useState(null);  // State to track hovered card
   const navigate = useNavigate();
 
   // Fetch user on mount
@@ -159,7 +118,7 @@ export default function Inventory() {
       ...prevFlippedCards,
       [cardId]: !prevFlippedCards[cardId],  // Toggle the flipped state
     }));
-  }, []);  // Ensure it doesn't depend on any changing variables
+  }, []);
 
   // Add card to inventory
   const handleAdd = useCallback(
@@ -246,26 +205,7 @@ export default function Inventory() {
     [navigate]
   );
 
-  // Debounced hover to reduce state changes
-  const debouncedSetSelectedCard = useDebouncedCallback(
-    (card) => {
-      if (selectedCard?.id !== card.id) {
-        setSelectedCard(card);
-      }
-    },
-    100
-  );
-
-  // Hover handler to trigger card selection
-  const handleHover = useCallback(
-    (card) => {
-      if (card) {  // Ensure card is not null before updating state
-        debouncedSetSelectedCard(card);
-      }
-    },
-    [debouncedSetSelectedCard]
-  );
-
+  // Inventory grid for rendering cards
   const inventoryGrid = useMemo(() => (
     inventory.map((card) => (
       <CardItem
@@ -273,12 +213,12 @@ export default function Inventory() {
         card={card}
         onClick={handleCardClick}
         onDelete={handleDelete}
-        onHover={handleHover}
         flipped={flippedCards[card.id]}  // Pass flipped state for each card
         onFlip={handleFlip}  // Pass flip handler
+        onHover={setHoveredCard}  // Set hovered card on mouse hover
       />
     ))
-  ), [inventory, flippedCards, handleCardClick, handleDelete, handleHover, handleFlip]);
+  ), [inventory, flippedCards, handleCardClick, handleDelete, handleFlip]);
 
   return (
     <div className="flex h-screen bg-[#0a1528] text-white relative">
@@ -295,13 +235,6 @@ export default function Inventory() {
               className="w-full h-[260px] object-contain rounded mb-2"
               onError={(e) => (e.target.src = '/placeholder.jpg')}
               loading="eager"
-              style={{
-                border: 'none',
-                outline: 'none',
-                backfaceVisibility: 'hidden',
-                transform: 'translateZ(0)',
-                userSelect: 'none',
-              }}
             />
             <div className="text-xs space-y-1">
               <p className="font-bold">{selectedCard.name}</p>

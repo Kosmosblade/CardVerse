@@ -14,14 +14,14 @@ body {
   color: white;
 }
 
-/* Fix flicker and blur on hover/flip */
-img {
+/* Fix flicker and blur on hover/flip (only on card items) */
+.card-item img {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transform: translateZ(0);
   will-change: transform;
   user-select: none;
-  pointer-events: none;
+  /* Removed pointer-events: none; as it was preventing hover */
 }
 
 /* Limit button transition scope */
@@ -111,4 +111,3 @@ button.absolute.top-1.right-1 {
     grid-template-columns: repeat(3, 1fr);
   }
 }
-

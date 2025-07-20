@@ -40,7 +40,7 @@ export default function CardPrints() {
     };
 
     fetchPrints();
-  }, [card]); // Depend on card object to reload when it changes
+  }, [card?.prints_search_uri]); // Depend on card's prints_search_uri to fetch new prints
 
   // Handle missing card or prints_search_uri
   if (!card) {

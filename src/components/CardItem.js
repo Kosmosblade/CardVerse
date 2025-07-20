@@ -1,10 +1,9 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 
 // Global cache object to store loaded images
 const imageCache = {};
 
 const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flipped, onFlip }) {
-  const [imageLoaded, setImageLoaded] = useState(false);  // Track if image has been cached/loaded
   const frontImage = card.image_url || '/placeholder.jpg';
   const backImage = card.back_image_url || null;
   const displayedImage = flipped && backImage ? backImage : frontImage;
@@ -13,8 +12,7 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flip
   const loadImage = (url) => {
     if (imageCache[url]) {
       console.log(`Image already cached: ${url}`);
-      setImageLoaded(true);  // If it's already cached, update state
-      return;
+      return;  // If it's already cached, don't load again
     }
 
     const img = new Image();
@@ -22,30 +20,37 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flip
     img.onload = () => {
       imageCache[url] = img;  // Store image in cache once loaded
       console.log(`Image cached: ${url}`);
-      setImageLoaded(true);  // Update state when image is loaded
     };
     img.onerror = () => {
       console.error(`Error loading image: ${url}`);
-      imageCache[url] = null;
-      setImageLoaded(false);  // Handle error case
+      imageCache[url] = null;  // Handle image load failure
     };
   };
 
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imageRef = useRef(null);  // To track the image element and avoid unnecessary re-fetches
+
   useEffect(() => {
-    loadImage(displayedImage);  // Cache the image when displayedImage changes
+    if (!imageCache[displayedImage]) {
+      console.log(`Image not cached: ${displayedImage}`);
+      loadImage(displayedImage); // Cache the image when displayedImage changes
+    } else {
+      console.log(`Image loaded from cache: ${displayedImage}`);
+      setImageLoaded(true); // If cached, set image as loaded
+    }
   }, [displayedImage]);
 
-  // Only render the image if it's loaded or fallback to placeholder
   const imageToDisplay = imageCache[displayedImage]?.src || '/placeholder.jpg';
+  console.log("Image source:", imageToDisplay);
 
   return (
     <div
       className="card-item relative group cursor-pointer"
       onClick={() => onClick(card)}
-      onMouseEnter={() => onHover(card)}  // Only pass card if it's valid
-      onMouseLeave={() => onHover(null)}  // Ensure null is passed when mouse leaves
+      onMouseEnter={() => onHover(card)}  // Ensure onHover is passed correctly
+      onMouseLeave={() => onHover(null)}  // Ensure onHover is passed correctly
     >
-      {/* Delete button at top-right corner */}
+      {/* Delete button */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -84,18 +89,24 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flip
           </div>
         )}
         <img
+          ref={imageRef}
           src={imageToDisplay}
           alt={card.name}
-          className="card-image w-full h-[300px] object-contain select-none rounded-lg"
+          className="card-image w-full h-[300px] object-contain select-none rounded-lg transition-all duration-300 opacity-0 group-hover:opacity-100"
           style={{
             outline: 'none',
             border: 'none',
             backfaceVisibility: 'hidden',
             transform: 'translateZ(0)',
             userSelect: 'none',
+            transition: 'opacity 0.3s ease-in-out',
           }}
           onError={(e) => (e.target.src = '/placeholder.jpg')}
           loading="lazy"
+          onLoad={() => {
+            console.log('Image loaded successfully');
+            setImageLoaded(true);  // Once image is loaded, trigger the loaded state
+          }}
         />
       </div>
     </div>
