@@ -6,9 +6,40 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
 
+  // Leaked password protection using HaveIBeenPwned
+  const isLeaked = async (password) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    const prefix = hashHex.slice(0, 5);
+    const suffix = hashHex.slice(5);
+
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+    const text = await res.text();
+
+    return text.includes(suffix);
+  };
+
   const handleSignup = async (e) => {
     e.preventDefault();
     setMessage('');
+
+    // Check if password is leaked
+    try {
+      const leaked = await isLeaked(password);
+      if (leaked) {
+        setMessage('This password has been found in a data breach. Please choose a more secure password.');
+        return;
+      }
+    } catch (err) {
+      console.error('Leaked password check failed:', err);
+      setMessage('Error checking password security. Try again later.');
+      return;
+    }
+
+    // Proceed with signup
     const { error } = await supabase.auth.signUp({ email, password });
 
     if (error) {

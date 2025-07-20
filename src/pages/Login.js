@@ -8,9 +8,38 @@ export default function Login() {
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
+  // Check against HaveIBeenPwned leaked password database
+  const isLeaked = async (password) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    const prefix = hashHex.slice(0, 5);
+    const suffix = hashHex.slice(5);
+
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+    const text = await res.text();
+
+    return text.includes(suffix);
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setMessage('');
+
+    try {
+      const leaked = await isLeaked(password);
+      if (leaked) {
+        setMessage('This password has been found in a data breach. Please use a different password.');
+        return;
+      }
+    } catch (err) {
+      console.error('Leaked password check failed:', err);
+      setMessage('Error checking password security. Try again later.');
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
@@ -48,7 +77,11 @@ export default function Login() {
         >
           Log In
         </button>
-        {message && <p className="text-sm text-red-400">{message}</p>}
+        {message && (
+          <p className="text-sm text-red-400">
+            {message}
+          </p>
+        )}
       </form>
     </div>
   );

@@ -15,8 +15,8 @@ export default function Card({ card, count = 1 }) {
   }
 
   const oracleText = card.oracle_text || 'No oracle text available';
-  const price = card.prices?.usd ? parseFloat(card.prices.usd).toFixed(2) : 'N/A'; // Handle price fallback
-  const colors = card.color_identity?.length ? card.color_identity.join(", ") : "N/A"; // Ensure safe access
+  const price = card.prices?.usd ? parseFloat(card.prices.usd).toFixed(2) : 'N/A';
+  const colors = card.color_identity?.length ? card.color_identity.join(", ") : "N/A";
 
   return (
     <Link
@@ -24,7 +24,6 @@ export default function Card({ card, count = 1 }) {
       state={{ card }}
       className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition duration-300 p-4 flex flex-col items-center text-center border border-gray-200 dark:border-gray-700 cursor-pointer select-text"
     >
-      {/* Image Handling */}
       {(card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal) ? (
         <img
           src={card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal}
@@ -35,6 +34,7 @@ export default function Card({ card, count = 1 }) {
             e.target.onerror = null;
             e.target.src = "https://via.placeholder.com/223x310?text=No+Image";
           }}
+          draggable={false}
         />
       ) : (
         <div className="h-44 w-full bg-gray-200 rounded-md mb-4 flex items-center justify-center text-gray-400">
@@ -68,8 +68,7 @@ export default function Card({ card, count = 1 }) {
         {oracleText}
       </p>
 
-      {/* Handling count display */}
-      <div className="text-indigo-600 font-semibold mt-2">x{count || 0}</div>
+      <div className="text-indigo-600 font-semibold mt-2 select-none">x{count || 0}</div>
     </Link>
   );
 }

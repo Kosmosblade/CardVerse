@@ -14,6 +14,7 @@ export default function CardDetail() {
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(!state?.card);
   const [error, setError] = useState(null);
+  const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
     const fetchCard = async () => {
@@ -23,12 +24,10 @@ export default function CardDetail() {
       try {
         let url = '';
 
-        // UUID regex for Scryfall id
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (uuidRegex.test(id)) {
           url = `https://api.scryfall.com/cards/${id}`;
         } else {
-          // fallback to exact name search (less reliable)
           url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(id)}`;
         }
 
@@ -55,6 +54,10 @@ export default function CardDetail() {
       fetchCard();
     }
   }, [id, card]);
+
+  useEffect(() => {
+    setFlipped(false);
+  }, [card, print]);
 
   if (loading) {
     return (
@@ -92,12 +95,17 @@ export default function CardDetail() {
     );
   }
 
-  const image =
+  const frontImage =
     print?.image_uris?.normal ||
     print?.card_faces?.[0]?.image_uris?.normal ||
     card.image_uris?.normal ||
     card.card_faces?.[0]?.image_uris?.normal ||
     'https://via.placeholder.com/223x310?text=No+Image';
+
+  const backImage =
+    print?.card_faces?.[1]?.image_uris?.normal ||
+    card.card_faces?.[1]?.image_uris?.normal ||
+    null;
 
   const oracleText =
     print?.oracle_text ||
@@ -124,18 +132,8 @@ export default function CardDetail() {
     setMessage(null);
 
     const name = print?.name || card.name;
-    const image_url =
-      print?.image_uris?.normal ||
-      print?.card_faces?.[0]?.image_uris?.normal ||
-      card.image_uris?.normal ||
-      card.card_faces?.[0]?.image_uris?.normal ||
-      null;
-
-    const back_image_url =
-      print?.card_faces?.[1]?.image_uris?.normal ||
-      card.card_faces?.[1]?.image_uris?.normal ||
-      null;
-
+    const image_url = frontImage;
+    const back_image_url = backImage;
     const set_name = print?.set_name || card.set_name || null;
     const scryfall_uri = print?.scryfall_uri || card.scryfall_uri || null;
     const scryfall_id = print?.id || card.id || null;
@@ -172,16 +170,46 @@ export default function CardDetail() {
   return (
     <div className="max-w-6xl mx-auto mt-12 px-6 py-8 bg-[#112b4a] text-white rounded-xl shadow-2xl">
       <div className="flex flex-col lg:flex-row gap-10">
-        <div className="flex-shrink-0">
-          <img
-            src={image}
-            alt={print?.name || card.name}
-            className="w-[280px] rounded-lg shadow-lg border border-blue-800"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = 'https://via.placeholder.com/223x310?text=No+Image';
-            }}
-          />
+        <div className="flex-shrink-0 flex flex-col items-center perspective-800">
+          {/* Card Container for flip */}
+          <div
+            className={`relative w-[280px] h-[390px] transition-transform duration-700 ease-in-out transform-style-preserve-3d ${
+              flipped ? 'rotate-y-180' : ''
+            }`}
+          >
+            {/* Front */}
+            <img
+              src={frontImage}
+              alt={print?.name || card.name}
+              className="absolute w-[280px] h-[390px] rounded-lg shadow-lg border border-blue-800 backface-hidden"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'https://via.placeholder.com/223x310?text=No+Image';
+              }}
+            />
+            {/* Back */}
+            {backImage && (
+              <img
+                src={backImage}
+                alt={`${print?.name || card.name} (Back)`}
+                className="absolute w-[280px] h-[390px] rounded-lg shadow-lg border border-blue-800 backface-hidden rotate-y-180"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://via.placeholder.com/223x310?text=No+Image';
+                }}
+              />
+            )}
+          </div>
+
+          {backImage && (
+            <button
+              onClick={() => setFlipped(!flipped)}
+              className="mt-4 px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded shadow select-none transition"
+              aria-label="Toggle transform / flip card"
+            >
+              {flipped ? 'Front' : 'Transform'}
+            </button>
+          )}
         </div>
 
         <div className="flex-1 space-y-3">
@@ -274,6 +302,26 @@ export default function CardDetail() {
           </div>
         </div>
       </div>
+
+      {/* Custom CSS for flip */}
+      <style>{`
+        .perspective-800 {
+          perspective: 800px;
+        }
+        .transform-style-preserve-3d {
+          transform-style: preserve-3d;
+        }
+        .backface-hidden {
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+          position: absolute;
+          top: 0;
+          left: 0;
+        }
+        .rotate-y-180 {
+          transform: rotateY(180deg);
+        }
+      `}</style>
     </div>
   );
 }

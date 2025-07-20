@@ -14,12 +14,17 @@ module.exports = {
       },
       animation: {
         'gradient-move': 'gradientMove 15s ease infinite',
+        'flip-card': 'flipCard 0.6s ease-in-out',
       },
       keyframes: {
         gradientMove: {
           '0%': { 'background-position': '0% 50%' },
           '50%': { 'background-position': '100% 50%' },
           '100%': { 'background-position': '0% 50%' },
+        },
+        flipCard: {
+          '0%': { transform: 'rotateY(0deg)' },
+          '100%': { transform: 'rotateY(180deg)' },
         },
       },
     },

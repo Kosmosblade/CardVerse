@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import './Inventory.css';  // Import the CSS
 
-// Debounce helper hook
 function useDebouncedCallback(callback, delay) {
   const timer = useRef(null);
 
@@ -16,7 +16,6 @@ function useDebouncedCallback(callback, delay) {
     [callback, delay]
   );
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => clearTimeout(timer.current);
   }, []);
@@ -24,37 +23,69 @@ function useDebouncedCallback(callback, delay) {
   return debouncedFn;
 }
 
-// Memoized Card component
 const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover }) {
+  const [flipped, setFlipped] = useState(false);
+
+  useEffect(() => {
+    setFlipped(false);
+  }, [card.id]);
+
+  const frontImage = card.image_url || '/placeholder.jpg';
+  const backImage = card.back_image_url || null;
+  const displayedImage = flipped && backImage ? backImage : frontImage;
+
   return (
     <div
-      className="relative group cursor-pointer"
+      className="card-item relative group cursor-pointer"
       onClick={() => onClick(card)}
       onMouseEnter={() => onHover(card)}
+      onMouseLeave={() => setFlipped(false)}
     >
+      {/* Delete button at top-right corner */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           onDelete(card.id);
         }}
-        className="absolute top-1 right-1 z-10 bg-red-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100"
-        style={{ transition: 'opacity 0.15s ease-in-out' }}
+        className="delete-btn absolute top-2 right-2 z-30 bg-red-700 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+        aria-label={`Delete ${card.name}`}
       >
-        ✕
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
       </button>
-      <img
-        src={card.image_url || '/placeholder.jpg'}
-        alt={card.name}
-        className="w-full h-[300px] object-contain"
-        style={{
-          outline: 'none',
-          border: 'none',
-          backfaceVisibility: 'hidden',
-          transform: 'translateZ(0)',
-        }}
-        onError={(e) => (e.target.src = '/placeholder.jpg')}
-        loading="lazy"
-      />
+
+      {/* Flip button at top-left corner */}
+      {backImage && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setFlipped((f) => !f);
+          }}
+          className="flip-btn absolute top-2 left-2 z-20 bg-gray-800 bg-opacity-75 text-white text-xs px-2 py-1 rounded-full select-none opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+          aria-label={flipped ? 'Show front image' : 'Show back image'}
+        >
+          {flipped ? 'Front' : 'Back'}
+        </button>
+      )}
+
+      {/* Image container that applies the flip effect */}
+      <div className={`card-image-container ${flipped ? 'flipped' : ''}`}>
+        <img
+          src={displayedImage}
+          alt={card.name}
+          className="card-image w-full h-[300px] object-contain select-none rounded-lg"
+          style={{
+            outline: 'none',
+            border: 'none',
+            backfaceVisibility: 'hidden',
+            transform: 'translateZ(0)',
+            userSelect: 'none',
+          }}
+          onError={(e) => (e.target.src = '/placeholder.jpg')}
+          loading="lazy"
+        />
+      </div>
     </div>
   );
 });
@@ -69,12 +100,10 @@ export default function Inventory() {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Load user on mount
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
   }, []);
 
-  // Fetch inventory
   const fetchInventory = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -102,7 +131,6 @@ export default function Inventory() {
     if (user) fetchInventory();
   }, [user, fetchInventory]);
 
-  // Add card
   const handleAdd = useCallback(
     async (e) => {
       e.preventDefault();
@@ -129,26 +157,24 @@ export default function Inventory() {
           result.image_uris?.normal ||
           result.card_faces?.[0]?.image_uris?.normal ||
           '';
-        const back_image_url =
-          result.card_faces?.[1]?.image_uris?.normal || '';
+        const back_image_url = result.card_faces?.[1]?.image_uris?.normal || '';
         const set_name = result.set_name || '';
         const scryfall_uri = result.scryfall_uri || '';
         const rawPrice = parseFloat(result.prices?.usd ?? '0');
         const price = !isNaN(rawPrice) && rawPrice > 0 ? rawPrice : 0;
 
-        const { error } = await supabase.from('inventory').insert([
-          {
-            name: result.name,
-            quantity: qty,
-            user_id: user.id,
-            price,
-            image_url,
-            back_image_url,
-            set_name,
-            scryfall_uri,
-            scryfall_id: result.id, // <-- added this
-          },
-        ]);
+        const { error } = await supabase.from('inventory').insert([{
+          name: result.name,
+          quantity: qty,
+          user_id: user.id,
+          price,
+          image_url,
+          back_image_url,
+          set_name,
+          scryfall_uri,
+          scryfall_id: result.id,
+        }]);
+
 
         if (error) {
           console.error(error);
@@ -166,7 +192,6 @@ export default function Inventory() {
     [cardName, quantity, user, fetchInventory]
   );
 
-  // Delete card
   const handleDelete = useCallback(
     async (id) => {
       const { error } = await supabase.from('inventory').delete().eq('id', id);
@@ -180,7 +205,6 @@ export default function Inventory() {
     [selectedCard, fetchInventory]
   );
 
-  // Navigate to card detail page
   const handleCardClick = useCallback(
     (card) => {
       if (card.scryfall_id) {
@@ -192,17 +216,15 @@ export default function Inventory() {
     [navigate]
   );
 
-  // Debounced hover handler to reduce flicker
   const debouncedSetSelectedCard = useDebouncedCallback(
     (card) => {
       if (selectedCard?.id !== card.id) {
         setSelectedCard(card);
       }
     },
-    100 // 100ms delay
+    100
   );
 
-  // Use the debounced hover handler
   const handleHover = useCallback(
     (card) => {
       debouncedSetSelectedCard(card);
@@ -212,15 +234,11 @@ export default function Inventory() {
 
   return (
     <div className="flex h-screen bg-[#0a1528] text-white relative">
-      {/* Sidebar Preview */}
+      {/* Sidebar */}
       <div
-        className="w-[240px] bg-[#0e1d35] p-3 pt-4 border-r border-blue-900"
-        style={{ pointerEvents: 'none' }} // prevent stealing hover
+        className="w-[240px] bg-[#0e1d35] p-3 pt-4 border-r border-blue-900 flex flex-col items-center"
       >
-        <h1
-          className="text-xl font-bold text-center text-cyan-300 mb-4"
-          style={{ pointerEvents: 'auto' }}
-        >
+        <h1 className="text-xl font-bold text-center text-cyan-300 mb-4">
           CardVerse
         </h1>
         {selectedCard ? (
@@ -236,10 +254,10 @@ export default function Inventory() {
                 outline: 'none',
                 backfaceVisibility: 'hidden',
                 transform: 'translateZ(0)',
-                pointerEvents: 'auto', // allow clicks on image
+                userSelect: 'none',
               }}
             />
-            <div className="text-xs space-y-1" style={{ pointerEvents: 'auto' }}>
+            <div className="text-xs space-y-1">
               <p className="font-bold">{selectedCard.name}</p>
               <p className="text-green-400">
                 Price:{' '}
@@ -253,20 +271,17 @@ export default function Inventory() {
                 target="_blank"
                 rel="noreferrer"
                 className="text-blue-400 underline"
-                style={{ pointerEvents: 'auto' }}
               >
                 View on Scryfall
               </a>
             </div>
           </>
         ) : (
-          <p className="text-sm" style={{ pointerEvents: 'auto' }}>
-            Hover a card to preview
-          </p>
+          <p className="text-sm">Hover a card to preview</p>
         )}
       </div>
 
-      {/* Main Content */}
+      {/* Inventory Section */}
       <div className="flex-1 overflow-y-auto p-6">
         <form
           onSubmit={handleAdd}
@@ -303,7 +318,7 @@ export default function Inventory() {
           </div>
         </form>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-2">
           {loading ? (
             <p className="col-span-full text-center text-blue-300">Loading...</p>
           ) : inventory.length === 0 ? (
@@ -324,7 +339,7 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* Right Hover Menu */}
+      {/* Menu */}
       <div className="fixed top-1/2 right-0 transform -translate-y-1/2 z-50">
         <div
           className="bg-blue-700 p-2 rounded-l cursor-pointer"
