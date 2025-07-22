@@ -12,6 +12,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #0b1120;
   color: white;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  justify-content: flex-start; /* Center content vertically */
 }
 
 /* Fix flicker and blur on hover/flip (only on card items) */
@@ -21,31 +25,11 @@ body {
   transform: translateZ(0);
   will-change: transform;
   user-select: none;
-  /* Removed pointer-events: none; as it was preventing hover */
 }
 
 /* Limit button transition scope */
 button.absolute.top-1.right-1 {
   transition: opacity 0.15s ease-in-out !important;
-}
-
-/* Card flip helper classes */
-.backface-hidden {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  -moz-backface-visibility: hidden;
-  -ms-backface-visibility: hidden;
-}
-
-.rotate-y-180 {
-  transform: rotateY(180deg);
-}
-
-.transform-style-preserve-3d {
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-  -moz-transform-style: preserve-3d;
-  -ms-transform-style: preserve-3d;
 }
 
 /* === Mobile Responsive Styles === */
@@ -60,22 +44,11 @@ button.absolute.top-1.right-1 {
     padding: 10px;
   }
 
-  .card-item .card-image {
-    width: 100%;
-    height: auto;
-  }
-
   .grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
 
-  /* Inventory Section */
-  .inventory-container {
-    padding: 10px;
-  }
-
-  /* Adjust grid for mobile */
   .grid-cols-2 {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -85,29 +58,6 @@ button.absolute.top-1.right-1 {
   }
 
   .grid-cols-4 {
-    grid-template-columns: repeat(2, 1fr); /* Stacked on small screens */
-  }
-
-  .grid-cols-5 {
-    grid-template-columns: repeat(2, 1fr); /* Stacked on small screens */
-  }
-}
-
-@media (max-width: 768px) {
-  /* Larger tablet screens */
-  .grid-cols-2 {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .grid-cols-3 {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .grid-cols-4 {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .grid-cols-5 {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 }

@@ -40,12 +40,64 @@ export default function Login() {
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Log the user in
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setMessage(error.message);
     } else {
-      navigate('/profile');
+      // Check if user profile exists
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single(); // Fetch single profile for this user
+
+      if (profileError || !profileData) {
+        // If the profile doesn't exist, create it
+        const { error: insertProfileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user.id, // Use the user's unique ID
+              email: data.user.email, // Email from the supabase auth object
+              username: data.user.email.split('@')[0], // Use email as default username, you can customize this
+              subscription_type: 'free', // Default subscription type
+              max_cards: 200, // Default maximum cards for free users
+              current_card_count: 0, // Initial card count
+              subscription_start: new Date().toISOString(), // Timestamp for subscription start
+              subscription_updated_at: new Date().toISOString(), // Timestamp for the last update
+            },
+          ]);
+
+        if (insertProfileError) {
+          setMessage('Error creating profile: ' + insertProfileError.message);
+          return;
+        }
+      }
+
+      // After successful login, update the current card count based on the user's subscription
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (updateError || !updatedProfile) {
+        setMessage('Error fetching profile data after login.');
+        return;
+      }
+
+      // Fetch the total card count for the user, based on the subscription type
+      const totalCardCount = updatedProfile.current_card_count;
+      const maxCardLimit = updatedProfile.subscription_type === 'free' ? 200 : 600;
+
+      // Update the card count on the Inventory page, directly setting it via the updatedProfile
+      setMessage(`Logged in successfully. Card count: ${totalCardCount} / ${maxCardLimit}`);
+
+      // Now, **do not redirect to the inventory page**. The card count will be used in the Inventory page.
+      // You can optionally navigate to a different page if you prefer.
+      // navigate('/inventory');
     }
   };
 

@@ -13,10 +13,9 @@ import Card from './components/Card';
 import './styles/Background.css';
 import CardDetail from './pages/CardDetail';
 import CardPrints from './components/CardPrints';
-import NavBar from './components/NavBar'; // Ensure the NavBar is imported
-import SearchBar from './components/SearchBar'; // Import SearchBar
+import NavBar from './components/NavBar'; 
+import SearchBar from './components/SearchBar';
 
-// The App function
 export default function App() {
   const [query, setQuery] = useState('');
   const [cards, setCards] = useState([]);
@@ -85,38 +84,49 @@ export default function App() {
       />
       <div className="background-overlay" />
 
-      {/* Navbar - This should be at the top */}
+      {/* Navbar */}
       <NavBar />
 
       {/* Only render SearchBar on homepage */}
-      {location.pathname === '/' && <SearchBar query={query} setQuery={setQuery} handleSearch={handleSearch} />}
+      {location.pathname === '/' && (
+        <SearchBar query={query} setQuery={setQuery} handleSearch={handleSearch} />
+      )}
 
-      {/* Main content */}
-      <main className="flex-grow p-6 max-w-6xl mx-auto mt-12"> {/* Added margin-top */}
-        <Routes>
-          <Route
-            path="/"
-            element={cards.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {cards.map((card) => (
-                  <Card key={card.id} card={card} />
-                ))}
-              </div>
-            ) : (
-              <SearchPage />
-            )}
-          />
-          <Route path="/decks" element={<DeckBuilder />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/logout" element={<Logout />} />
-          <Route path="/card/:id" element={<CardDetail />} />
-          <Route path="/card-prints" element={<CardPrints />} />
-          <Route path="*" element={<div className="text-center text-gray-300 text-xl mt-10">Page not found</div>} />
-        </Routes>
+      {/* Main content - Centered search results */}
+      <main className="flex-grow flex justify-center items-center p-6 max-w-6xl mx-auto mt-12">
+        <div className="w-full flex justify-center">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                cards.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-center items-center">
+                    {/* Ensuring the grid items (cards) are centered */}
+                    {cards.map((card) => (
+                      <Card key={card.id} card={card} />
+                    ))}
+                  </div>
+                ) : (
+                  <SearchPage />
+                )
+              }
+            />
+            {/* Other Routes */}
+            <Route path="/decks" element={<DeckBuilder />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/logout" element={<Logout />} />
+            <Route path="/card/:id" element={<CardDetail />} />
+            <Route path="/card-prints" element={<CardPrints />} />
+            <Route
+              path="*"
+              element={<div className="text-center text-gray-300 text-xl mt-10">Page not found</div>}
+            />
+          </Routes>
+        </div>
       </main>
 
       {/* Footer */}

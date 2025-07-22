@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient';
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(''); // New username field
   const [message, setMessage] = useState('');
 
   // Leaked password protection using HaveIBeenPwned
@@ -70,6 +71,14 @@ export default function Signup() {
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="new-password"
+        />
+        <input
+          type="text"
+          className="p-3 bg-black text-white border border-gray-600 rounded placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
         />
         <button
           type="submit"

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-// Ensure that SearchBar and Card are default exports in their respective files
-import SearchBar from '../components/SearchBar';
-import Card from '../components/Card';
+import SearchBar from '../components/SearchBar';  // default export ✅
+import Card from '../components/Card';            // default export ✅
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
@@ -22,6 +21,7 @@ export default function SearchPage() {
         setCards([]);  // Clear cards if not found
         return;
       }
+
       setCards([data]);  // Set the fetched card data
     } catch (error) {
       alert('Error fetching card data');
@@ -30,17 +30,20 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      {/* Ensure SearchBar is properly passed down the props */}
-      <SearchBar query={query} setQuery={setQuery} handleSearch={handleSearch} />
+    <div className="max-w-6xl mx-auto p-6 flex flex-col items-center">
+      {/* Search bar */}
+      <SearchBar
+        query={query}
+        setQuery={setQuery}
+        handleSearch={handleSearch}
+      />
 
-      <div className="mt-6">
-        {/* Show message if no cards are loaded */}
+      {/* Card Results */}
+      <div className="mt-6 w-full flex justify-center">
         {cards.length === 0 ? (
           <p className="text-center text-gray-500 text-lg italic">No cards loaded</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {/* Render the fetched cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
             {cards.map((card) => (
               <Card key={card.id} card={card} />
             ))}

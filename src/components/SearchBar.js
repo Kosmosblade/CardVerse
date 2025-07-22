@@ -3,7 +3,10 @@ import React from 'react';
 
 export default function SearchBar({ query, setQuery, handleSearch }) {
   return (
-    <form onSubmit={handleSearch} className="flex shadow-lg rounded-lg overflow-hidden fixed top-4 left-4 z-50 w-80">
+    <form
+      onSubmit={handleSearch}
+      className="flex shadow-lg rounded-lg overflow-hidden fixed top-4 left-4 z-50 w-80"
+    >
       <input
         type="text"
         placeholder="Search card by exact name"
