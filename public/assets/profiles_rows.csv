@@ -1,0 +1,4 @@
+id,email,username,subscription_type,max_card_limit,current_card_count,subscription_start,subscription_end,subscription_updated_at
+4b9afad6-7682-4946-b2e6-cec9c62456e5,kosmoblade@gmail.com,kosmoblade,premium,600,2,2025-07-21 06:40:55.994,,2025-07-21 06:40:55.994
+bce9edaf-cb01-45a4-a47c-e1efc50aa54e,wschmitt5586@gmail.com,wschmitt5586,premium,600,70,2025-07-22 02:57:50.773,,2025-07-22 02:57:50.773
+f09c7623-4395-43ac-bd6c-cd2f0069d271,mikeschmitt7@gmail.com,mikeschmitt7,free,200,21,2025-07-21 06:58:42.825,,2025-07-21 06:58:42.825

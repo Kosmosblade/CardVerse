@@ -1,9 +1,24 @@
-import React, { useState, useCallback, memo, useLayoutEffect, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  memo,
+  useMemo,
+  useRef,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import CardCountDisplay from '../components/CardCountDisplay'; // new component
 import './Inventory.css';
 
-const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flipped, onFlip }) {
+const CardItem = memo(function CardItem({
+  card,
+  onClick,
+  onDelete,
+  onHover,
+  flipped,
+  onFlip,
+}) {
   const frontImage = card.image_url || '/placeholder.jpg';
   const backImage = card.back_image_url || null;
   const displayedImage = flipped && backImage ? backImage : frontImage;
@@ -12,8 +27,8 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flip
     <div
       className="card-item relative group cursor-pointer"
       onClick={() => onClick(card)}
-      onMouseEnter={() => onHover(card)} 
-      onMouseLeave={() => onHover(null)} 
+      onMouseEnter={() => onHover(card)}
+      onMouseLeave={() => onHover(null)}
     >
       <button
         onClick={(e) => {
@@ -23,8 +38,19 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flip
         className="delete-btn absolute top-2 right-2 z-30 bg-red-700 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150"
         aria-label={`Delete ${card.name}`}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
         </svg>
       </button>
 
@@ -59,9 +85,11 @@ const CardItem = memo(function CardItem({ card, onClick, onDelete, onHover, flip
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-  return prevProps.card.id === nextProps.card.id && prevProps.flipped === nextProps.flipped;
-});
+},
+(prevProps, nextProps) =>
+  prevProps.card.id === nextProps.card.id &&
+  prevProps.flipped === nextProps.flipped
+);
 
 export default function Inventory() {
   const [cardName, setCardName] = useState('');
@@ -70,195 +98,186 @@ export default function Inventory() {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [selectedCard, setSelectedCard] = useState(null);
-  const [flippedCards, setFlippedCards] = useState({});  
-  const [hoveredCard, setHoveredCard] = useState(null);  
-  const hoveredCardRef = useRef(null);  
-  const [currentPage, setCurrentPage] = useState(1);  
-  const [pageSize] = useState(50);  
+  const [flippedCards, setFlippedCards] = useState({});
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const hoveredCardRef = useRef(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const navigate = useNavigate();
 
-  useLayoutEffect(() => {
+  // Get user on mount
+  useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       console.log('User role:', user?.role);
-      updateCardCount();
     });
   }, []);
 
-  const updateCardCount = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('inventory')
-        .select('quantity')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error fetching card count:', error);
-        return;
-      }
-
-      const totalCardCount = data.reduce((total, card) => total + card.quantity, 0);
-      const maxCardLimit = user.role === 'free' ? 200 : 600;  
-      console.log(`Total card count: ${totalCardCount}, Max card limit: ${maxCardLimit}`); 
-
-      const { updateError } = await supabase
-        .from('profiles')
-        .update({ current_card_count: totalCardCount })
-        .eq('id', user.id);
-
-      if (updateError) {
-        console.error('Error updating card count:', updateError);
-      } else {
-        console.log('Card count updated successfully');
-      }
-    } catch (error) {
-      console.error('Error updating card count:', error);
-    }
-  }, [user]);
-
+  // Fetch inventory cards when user, page, or refreshTrigger changes
   const fetchInventory = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
     const { data, error } = await supabase
       .from('inventory')
-      .select('id, name, quantity, price, image_url, back_image_url, set_name, scryfall_uri, scryfall_id')
+      .select(
+        'id, name, quantity, price, image_url, back_image_url, set_name, scryfall_uri, scryfall_id'
+      )
       .eq('user_id', user.id)
-      .range((currentPage - 1) * pageSize, currentPage * pageSize - 1)  
+      .range((currentPage - 1) * pageSize, currentPage * pageSize - 1)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error loading inventory:', error);
       setInventory([]);
     } else {
-      setInventory(data || []);  
+      setInventory(data || []);
       if (!selectedCard && data?.length) setSelectedCard(data[0]);
     }
 
     setLoading(false);
   }, [user, selectedCard, currentPage, pageSize]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (user) {
       fetchInventory();
-      updateCardCount();
     }
-  }, [user?.role, fetchInventory, updateCardCount]); // Watch for changes to user role
+  }, [user, fetchInventory, currentPage, refreshTrigger]);
 
   const handleFlip = useCallback((cardId) => {
-    setFlippedCards((prevFlippedCards) => ({
-      ...prevFlippedCards,
-      [cardId]: !prevFlippedCards[cardId], 
+    setFlippedCards((prev) => ({
+      ...prev,
+      [cardId]: !prev[cardId],
     }));
-  }, []);  
+  }, []);
 
-  const handleAdd = useCallback(async (e) => {
-    e.preventDefault();
+  const handleAdd = useCallback(
+    async (e) => {
+      e.preventDefault();
 
-    if (!cardName.trim()) return alert('Card name is required');
-    if (!user) return alert('User not loaded');
+      if (!cardName.trim()) return alert('Card name is required');
+      if (!user) return alert('User not loaded');
 
-    const qty = parseInt(quantity, 10);
-    if (isNaN(qty) || qty < 1) return alert('Quantity must be at least 1');
+      const qty = parseInt(quantity, 10);
+      if (isNaN(qty) || qty < 1) return alert('Quantity must be at least 1');
 
-    try {
-      const response = await fetch(
-        `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName.trim())}`
-      );
-      const result = await response.json();
+      try {
+        const response = await fetch(
+          `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(
+            cardName.trim()
+          )}`
+        );
+        const result = await response.json();
 
-      if (!result || result.object === 'error') {
-        return alert('Card not found');
-      }
+        if (!result || result.object === 'error') {
+          return alert('Card not found');
+        }
 
-      const image_url = result.image_uris?.normal || result.card_faces?.[0]?.image_uris?.normal || '';
-      const back_image_url = result.card_faces?.[1]?.image_uris?.normal || '';
-      const set_name = result.set_name || '';
-      const scryfall_uri = result.scryfall_uri || '';
-      const rawPrice = parseFloat(result.prices?.usd ?? '0');
-      const price = !isNaN(rawPrice) && rawPrice > 0 ? rawPrice : 0;
+        const image_url =
+          result.image_uris?.normal ||
+          result.card_faces?.[0]?.image_uris?.normal ||
+          '';
+        const back_image_url = result.card_faces?.[1]?.image_uris?.normal || '';
+        const set_name = result.set_name || '';
+        const scryfall_uri = result.scryfall_uri || '';
+        const rawPrice = parseFloat(result.prices?.usd ?? '0');
+        const price = !isNaN(rawPrice) && rawPrice > 0 ? rawPrice : 0;
 
-      const { error } = await supabase.from('inventory').insert([{
-        name: result.name,
-        quantity: qty,
-        user_id: user.id,
-        price,
-        image_url,
-        back_image_url,
-        set_name,
-        scryfall_uri,
-        scryfall_id: result.id,
-      }]);
+        const { error } = await supabase.from('inventory').insert([
+          {
+            name: result.name,
+            quantity: qty,
+            user_id: user.id,
+            price,
+            image_url,
+            back_image_url,
+            set_name,
+            scryfall_uri,
+            scryfall_id: result.id,
+          },
+        ]);
 
-      if (error) {
+        if (error) {
+          console.error(error);
+          alert('Failed to add card');
+        } else {
+          setCardName('');
+          setQuantity(1);
+          setRefreshTrigger((prev) => prev + 1); // trigger refresh
+          alert('Card added successfully!');
+        }
+      } catch (error) {
         console.error(error);
-        alert('Failed to add card');
-      } else {
-        await updateCardCount(); 
-        setCardName('');
-        setQuantity(1);
-        fetchInventory();
-        alert('Card added successfully!');
+        alert('Failed to add card due to network or API error');
       }
-    } catch (error) {
-      console.error(error);
-      alert('Failed to add card due to network or API error');
-    }
-  }, [cardName, quantity, user, fetchInventory, updateCardCount]);
+    },
+    [cardName, quantity, user]
+  );
 
-  const handleDelete = useCallback(async (id) => {
-    const { error } = await supabase.from('inventory').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting card:', error);
-    } else {
-      if (selectedCard?.id === id) setSelectedCard(null);
-      await updateCardCount(); 
-      fetchInventory();
-    }
-  }, [selectedCard, fetchInventory, updateCardCount]);
+  const handleDelete = useCallback(
+    async (id) => {
+      const { error } = await supabase.from('inventory').delete().eq('id', id);
+      if (error) {
+        console.error('Error deleting card:', error);
+      } else {
+        if (selectedCard?.id === id) setSelectedCard(null);
+        setRefreshTrigger((prev) => prev + 1); // trigger refresh
+      }
+    },
+    [selectedCard]
+  );
 
-  const handleCardClick = useCallback((card) => {
-    if (card.scryfall_id) {
-      navigate(`/card/${card.scryfall_id}`);
-    } else {
-      navigate(`/card/${encodeURIComponent(card.name)}`);
-    }
-  }, [navigate]);
+  const handleCardClick = useCallback(
+    (card) => {
+      if (card.scryfall_id) {
+        navigate(`/card/${card.scryfall_id}`);
+      } else {
+        navigate(`/card/${encodeURIComponent(card.name)}`);
+      }
+    },
+    [navigate]
+  );
 
   const handleCardHover = useCallback((card) => {
     if (card) {
-      setHoveredCard(card);  
+      setHoveredCard(card);
       hoveredCardRef.current = card;
     } else {
-      setHoveredCard(hoveredCardRef.current);  
+      setHoveredCard(hoveredCardRef.current);
     }
   }, []);
 
   const handleNextPage = () => {
-    setCurrentPage((prevPage) => prevPage + 1);
+    setCurrentPage((prev) => prev + 1);
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prevPage) => prevPage - 1);
-    }
+    setCurrentPage((prev) => (prev > 1 ? prev - 1 : 1));
   };
 
-  const inventoryGrid = useMemo(() => (
-    inventory.map((card) => (
-      <CardItem
-        key={card.id}
-        card={card}
-        onClick={handleCardClick}
-        onDelete={handleDelete}
-        flipped={flippedCards[card.id]} 
-        onFlip={handleFlip} 
-        onHover={handleCardHover} 
-      />
-    ))
-  ), [inventory, flippedCards, handleCardClick, handleDelete, handleFlip, handleCardHover]);
+  const inventoryGrid = useMemo(
+    () =>
+      inventory.map((card) => (
+        <CardItem
+          key={card.id}
+          card={card}
+          onClick={handleCardClick}
+          onDelete={handleDelete}
+          flipped={flippedCards[card.id]}
+          onFlip={handleFlip}
+          onHover={handleCardHover}
+        />
+      )),
+    [
+      inventory,
+      flippedCards,
+      handleCardClick,
+      handleDelete,
+      handleFlip,
+      handleCardHover,
+    ]
+  );
 
   return (
     <div className="flex h-screen bg-[#0a1528] text-white relative">
@@ -277,7 +296,10 @@ export default function Inventory() {
             <div className="text-xs space-y-1">
               <p className="font-bold">{hoveredCard.name}</p>
               <p className="text-green-400">
-                Price: {hoveredCard.price > 0 ? `$${hoveredCard.price.toFixed(2)}` : 'N/A'}
+                Price:{' '}
+                {hoveredCard.price > 0
+                  ? `$${hoveredCard.price.toFixed(2)}`
+                  : 'N/A'}
               </p>
               <p className="text-blue-300">Set: {hoveredCard.set_name}</p>
               <a
@@ -302,7 +324,10 @@ export default function Inventory() {
             <div className="text-xs space-y-1">
               <p className="font-bold">{selectedCard.name}</p>
               <p className="text-green-400">
-                Price: {selectedCard.price > 0 ? `$${selectedCard.price.toFixed(2)}` : 'N/A'}
+                Price:{' '}
+                {selectedCard.price > 0
+                  ? `$${selectedCard.price.toFixed(2)}`
+                  : 'N/A'}
               </p>
               <p className="text-blue-300">Set: {selectedCard.set_name}</p>
               <a
@@ -319,9 +344,8 @@ export default function Inventory() {
           <p className="text-sm">Hover a card to preview</p>
         )}
 
-        <div className="text-xs mt-4 text-center">
-          <p>{user ? `Cards: ${inventory.length} / ${user.role === 'free' ? 200 : 600}` : ''}</p>
-        </div>
+        {/* Use the new CardCountDisplay component here */}
+        {user && <CardCountDisplay user={user} refreshTrigger={refreshTrigger} />}
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">

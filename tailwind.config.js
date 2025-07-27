@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  darkMode: 'class', // optional, but often helpful for dark mode toggling
+  content: ['./src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -18,9 +19,9 @@ module.exports = {
       },
       keyframes: {
         gradientMove: {
-          '0%': { 'background-position': '0% 50%' },
-          '50%': { 'background-position': '100% 50%' },
-          '100%': { 'background-position': '0% 50%' },
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' },
         },
         flipCard: {
           '0%': { transform: 'rotateY(0deg)' },
@@ -30,4 +31,4 @@ module.exports = {
     },
   },
   plugins: [require('@tailwindcss/line-clamp')],
-}
+};

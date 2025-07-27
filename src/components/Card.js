@@ -10,15 +10,15 @@ export default function Card({ card, count = 1 }) {
       const cachedImage = localStorage.getItem(imageUrl);
 
       if (cachedImage) {
-        setImageSrc(cachedImage); // If cached, use it
+        setImageSrc(cachedImage);
       } else {
-        setImageSrc(imageUrl); // Otherwise, use the original URL
+        setImageSrc(imageUrl);
       }
     }
   }, [card]);
 
   const handleImageLoad = (url) => {
-    localStorage.setItem(url, url); // Save the image URL in localStorage once it's loaded
+    localStorage.setItem(url, url);
   };
 
   if (!card) {
@@ -28,7 +28,7 @@ export default function Card({ card, count = 1 }) {
           No Data
         </div>
         <div className="text-lg font-bold text-gray-900">Unknown Card</div>
-        <div className="text-indigo-600 font-semibold mt-1">x{count}</div>
+        <span className="bubble mt-2 select-none text-gray-900">x{count}</span>
       </div>
     );
   }
@@ -41,8 +41,9 @@ export default function Card({ card, count = 1 }) {
     <Link
       to={`/card/${card.id}`}
       state={{ card }}
-      className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition duration-300 p-4 flex flex-col items-center text-center border border-gray-200 dark:border-gray-700 cursor-pointer select-text"
+      className="bg-black bg-opacity-90 rounded-2xl shadow-lg hover:shadow-2xl transition duration-300 p-4 flex flex-col items-center text-center border border-gray-700 cursor-pointer select-text text-white"
     >
+
       {imageSrc ? (
         <img
           src={imageSrc}
@@ -54,7 +55,7 @@ export default function Card({ card, count = 1 }) {
             e.target.src = "https://via.placeholder.com/223x310?text=No+Image";
           }}
           draggable={false}
-          onLoad={() => handleImageLoad(imageSrc)} // Cache the image once loaded
+          onLoad={() => handleImageLoad(imageSrc)}
         />
       ) : (
         <div className="h-44 w-full bg-gray-200 rounded-md mb-4 flex items-center justify-center text-gray-400">
@@ -62,9 +63,27 @@ export default function Card({ card, count = 1 }) {
         </div>
       )}
 
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white">{card.name}</h2>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-        {card.set_name} • {card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)}
+      {/* Card name in white */}
+      <h2 className="text-xl font-bold text-white">{card.name}</h2>
+
+      {/* Bubbles container */}
+      <div className="flex flex-wrap justify-center gap-2 mt-2">
+        {/* Rarity bubble with white text */}
+        <span className="bubble text-white">
+          {card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)}
+        </span>
+
+        {/* Colors bubble with white text */}
+        {card.color_identity && card.color_identity.length > 0 && (
+          <span className="bubble text-white">
+            {colors}
+          </span>
+        )}
+      </div>
+
+      {/* Set name - lighter gray text */}
+      <p className="text-sm text-gray-400 mt-1">
+        {card.set_name} {/* rarity moved to bubble */}
       </p>
 
       {price !== 'N/A' && (
@@ -73,22 +92,19 @@ export default function Card({ card, count = 1 }) {
         </p>
       )}
 
-      <div className="text-sm mt-1">
+      <div className="text-sm mt-1 text-white">
         <strong>Mana Cost:</strong> {card.mana_cost || "N/A"}
       </div>
 
-      <div className="text-sm mt-1">
-        <strong>Colors:</strong> {colors}
-      </div>
-
       <p
-        className="text-xs text-gray-500 dark:text-gray-400 mt-3 max-h-[4.5em] overflow-hidden text-ellipsis line-clamp-3 hover:line-clamp-none transition-all duration-300"
+        className="text-xs text-gray-300 mt-3 max-h-[4.5em] overflow-hidden text-ellipsis line-clamp-3 hover:line-clamp-none transition-all duration-300"
         title={oracleText}
       >
         {oracleText}
       </p>
 
-      <div className="text-indigo-600 font-semibold mt-2 select-none">x{count || 0}</div>
+      {/* Count bubble white text */}
+      <span className="bubble mt-2 select-none text-white">x{count || 0}</span>
     </Link>
   );
 }

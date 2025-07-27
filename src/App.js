@@ -15,6 +15,7 @@ import CardDetail from './pages/CardDetail';
 import CardPrints from './components/CardPrints';
 import NavBar from './components/NavBar'; 
 import SearchBar from './components/SearchBar';
+import AdvancedSearch from './pages/AdvancedSearch';
 
 export default function App() {
   const [query, setQuery] = useState('');
@@ -121,6 +122,7 @@ export default function App() {
             <Route path="/logout" element={<Logout />} />
             <Route path="/card/:id" element={<CardDetail />} />
             <Route path="/card-prints" element={<CardPrints />} />
+            <Route path="/advanced-search" element={<AdvancedSearch />} />
             <Route
               path="*"
               element={<div className="text-center text-gray-300 text-xl mt-10">Page not found</div>}
