@@ -14,8 +14,8 @@ export default function SearchBar({ query, setQuery, setCards }) {
           description: card.oracle_text || 'No description',
           color: 7506394,
           fields: [
-            { name: 'Set', value: card.set_name, inline: true },
-            { name: 'Rarity', value: card.rarity, inline: true },
+            { name: 'Set', value: card.set_name || 'N/A', inline: true },
+            { name: 'Rarity', value: card.rarity || 'N/A', inline: true },
             { name: 'Price (USD)', value: card.prices?.usd || 'N/A', inline: true },
           ],
           thumbnail: { url: card.image_uris?.small || '' },
@@ -25,11 +25,14 @@ export default function SearchBar({ query, setQuery, setCards }) {
     };
 
     try {
-      await fetch('https://discord.com/api/webhooks/YOUR_WEBHOOK_URL_HERE', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      await fetch(
+        'https://discord.com/api/webhooks/1393842813128671293/P1QfMYz7uAiTnwXLdTjRBc5iFQlrFKy00jrYUaH6tf12htO3t45eOtn9in082ieQFPbd',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
     } catch (err) {
       console.error('Discord webhook failed:', err);
     }
@@ -37,13 +40,15 @@ export default function SearchBar({ query, setQuery, setCards }) {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
 
     try {
       const res = await fetch(
-        `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(query.trim())}`
+        `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(trimmedQuery)}`
       );
       const data = await res.json();
+
       if (data.object === 'error') {
         alert('Card not found');
         setCards([]);
@@ -53,8 +58,8 @@ export default function SearchBar({ query, setQuery, setCards }) {
       setCards([data]);
       await sendDiscordWebhook(data);
     } catch (error) {
-      alert('Error fetching card data');
-      console.error(error);
+      console.error('Error fetching card:', error);
+      alert('Error fetching card data. Check console for details.');
     }
   };
 
