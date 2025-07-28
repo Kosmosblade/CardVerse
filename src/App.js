@@ -44,7 +44,6 @@ export default function App() {
         ],
       };
 
-      // Call your backend API to send webhook
       const res = await fetch('/api/send-to-discord', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,10 +52,17 @@ export default function App() {
 
       if (!res.ok) {
         const text = await res.text();
-        console.error('Discord webhook API error:', text);
+        console.error('[Webhook Error]', {
+          status: res.status,
+          statusText: res.statusText,
+          response: text,
+          payload,
+        });
+      } else {
+        console.log('[Webhook Success]', await res.json());
       }
     } catch (err) {
-      console.error('Webhook send error:', err);
+      console.error('[Webhook Exception]', err);
     }
   };
 
@@ -72,15 +78,17 @@ export default function App() {
 
       if (data.object === 'error') {
         alert('Card not found');
+        console.warn('[Scryfall Error]', data);
         setCards([]);
         return;
       }
 
       setCards([data]);
+      console.log('[Card Fetched]', data);
       await sendDiscordWebhook(data);
     } catch (error) {
       alert('Error fetching card data');
-      console.error(error);
+      console.error('[Search Exception]', error);
     }
   };
 
