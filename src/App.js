@@ -22,21 +22,21 @@ export default function App() {
   const [cards, setCards] = useState([]);
   const location = useLocation();
 
-  const sendDiscordWebhook = async (card) => {
+  async function sendDiscordWebhook(card) {
     const payload = {
-      username: 'CardVerse Bot',
+      username: "CardVerse Bot",
       embeds: [
         {
-          title: `Card Searched: ${card.name}`,
+          title: `Card Found in Deck: ${card.name}`,
           url: card.scryfall_uri,
-          description: card.oracle_text || 'No description',
+          description: card.oracle_text || "No description",
           color: 7506394,
           fields: [
-            { name: 'Set', value: card.set_name, inline: true },
-            { name: 'Rarity', value: card.rarity, inline: true },
-            { name: 'Price (USD)', value: card.prices?.usd || 'N/A', inline: true },
+            { name: "Set", value: card.set_name, inline: true },
+            { name: "Rarity", value: card.rarity, inline: true },
+            { name: "Price (USD)", value: card.prices?.usd || "N/A", inline: true },
           ],
-          thumbnail: { url: card.image_uris?.small || '' },
+          thumbnail: { url: card.image_uris?.small || "" },
           timestamp: new Date().toISOString(),
         },
       ],
@@ -132,9 +132,17 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#112b4a] border-t mt-20 p-4 text-center text-sm text-blue-200 shadow-inner">
-        &copy; {new Date().getFullYear()} CardVerse. All rights reserved.
-      </footer>
+<footer className="bg-[#112b4a] border-t mt-20 p-4 text-center text-sm text-yellow-500 shadow-inner">
+  <p style={{ fontSize: '0.8em', color: 'gray', marginBottom: '0.5rem' }}>
+    Card data and images © Wizards of the Coast. Data provided by{' '}
+    <a href="https://scryfall.com" target="_blank" rel="noopener noreferrer" className="underline">
+      Scryfall
+    </a>.
+    This site is not affiliated with, endorsed, or sponsored by Wizards of the Coast LLC.
+  </p>
+  &copy; {new Date().getFullYear()} Conjuring Crypt. All rights reserved.
+</footer>
+
     </div>
   );
 }

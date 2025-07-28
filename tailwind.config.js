@@ -1,11 +1,10 @@
-/** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'class', // optional, but often helpful for dark mode toggling
-  content: ['./src/**/*.{js,jsx,ts,tsx}'],
+  darkMode: 'class', // good for toggling dark mode manually via class
+  content: ['./src/**/*.{js,jsx,ts,tsx}'], // scanning your source files
   theme: {
     extend: {
       colors: {
-        midnight: '#0b1120',
+        midnight: '#0b1120', // custom dark color
       },
       backgroundImage: {
         'animated-gradient': 'linear-gradient(270deg, #4f46e5, #3b82f6, #06b6d4, #4f46e5)',
