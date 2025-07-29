@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -12,48 +12,14 @@ export default function AICommanderDecks() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [chatLog, setChatLog] = useState([]);
 
-  const chatContainerRef = useRef(null);
-
   const toggleSidebar = () => setShowSidebar((prev) => !prev);
 
-  // Scroll to bottom when chatLog changes
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [chatLog]);
-
   const handleSendMessage = (message) => {
-    // Add user message immediately
-    setChatLog((prev) => [...prev, { role: 'user', text: message }]);
-
-    // Prepare the messages for the API call including the new user message
-    setChatLog((prev) => {
-      const updatedMessages = [...prev, { role: 'user', text: message }];
-
-      // Call backend AI API asynchronously
-      (async () => {
-        try {
-          const res = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: updatedMessages }),
-          });
-          const data = await res.json();
-
-          // Append AI reply to chatLog
-          setChatLog((prevChat) => [...prevChat, { role: 'ai', text: data.reply }]);
-        } catch (err) {
-          setChatLog((prevChat) => [
-            ...prevChat,
-            { role: 'ai', text: 'Sorry, error from AI.' },
-          ]);
-          console.error(err);
-        }
-      })();
-
-      return updatedMessages; // update chatLog state
-    });
+    setChatLog((prev) => [
+      ...prev,
+      { role: 'user', text: message },
+      { role: 'ai', text: "I'm thinking..." },
+    ]);
   };
 
   return (
@@ -89,10 +55,7 @@ export default function AICommanderDecks() {
           </ul>
 
           {/* Chat Log */}
-          <div
-            ref={chatContainerRef}
-            className="flex-1 overflow-y-auto mb-4 rounded-lg p-2 bg-gray-800 border border-gray-700"
-          >
+          <div className="flex-1 overflow-y-auto mb-4 rounded-lg p-2 bg-gray-800 border border-gray-700">
             {chatLog.length === 0 && (
               <p className="text-gray-400 italic text-center select-none">No messages yet. Say hi!</p>
             )}
