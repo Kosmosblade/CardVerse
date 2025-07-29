@@ -14,7 +14,7 @@ export default function SearchBar({ query, setQuery, handleSearch }) {
         placeholder="Search card by exact name"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="px-4 py-2 w-full text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-l-lg"
+        className="px-4 py-2 w-full text-sm text-white-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-l-lg"
         aria-label="Search cards by exact name"
       />
       <button

@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 // Correct paths for your styles
-import '../styles/Background.css'; 
+import '../styles/Background.css';
 
 export default function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
 
+  // Added AICommanderDecks route and updated logo text
   const links = [
     { name: 'Browse Cards', to: '/' },
     { name: 'My Decks', to: '/decks' },
     { name: 'Inventory', to: '/inventory' },
+    { name: 'AICommanderDeck', to: '/aicommanderdecks' },  // <-- comma fixed here
     { name: 'About', to: '/about' },
     { name: 'Login', to: '/login' },
     { name: 'Signup', to: '/signup' },
@@ -45,18 +47,18 @@ export default function NavBar() {
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          backgroundColor: 'rgba(0, 0, 0, 0.4)', // Add subtle dark overlay for better contrast
+          backgroundColor: 'rgba(0, 0, 0, 0.4)', // Subtle dark overlay for contrast
         }}
       >
         <div className="flex items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-3">
             <img
               src={`${process.env.PUBLIC_URL}/assets/logo.png`} 
-              alt="CardVerse Logo"
+              alt="Conjuring Crypt Logo"
               className="h-12 w-auto drop-shadow-md"
             />
             <span className="text-3xl font-extrabold text-white tracking-wide select-none">
-              Card<span className="text-indigo-500">Verse</span>
+              Conjuring <span className="text-indigo-500">Crypt</span>
             </span>
           </Link>
 
@@ -64,6 +66,7 @@ export default function NavBar() {
           <button
             onClick={() => setMenuOpen(false)}
             className="text-white hover:bg-gray-200 p-2 rounded-md md:hidden"
+            aria-label="Close Menu"
           >
             <svg
               className="h-6 w-6"
@@ -87,7 +90,9 @@ export default function NavBar() {
               <Link
                 to={to}
                 onClick={() => setMenuOpen(false)}
-                className={`text-lg font-medium text-gray-200 hover:text-indigo-500 transition duration-200 ${location.pathname === to ? 'text-indigo-500 font-bold' : ''} hover:underline hover:underline-offset-4`}
+                className={`text-lg font-medium text-gray-200 hover:text-indigo-500 transition duration-200 ${
+                  location.pathname === to ? 'text-indigo-500 font-bold' : ''
+                } hover:underline hover:underline-offset-4`}
               >
                 {name}
               </Link>

@@ -2,78 +2,137 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Set up body and html correctly */
-html, body {
-  height: auto;
+/* === BASE === */
+html,
+body {
+  height: 100%;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  overflow-y: auto;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   background-color: #0b1120;
   color: white;
+  font-family: 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Flicker fix for images */
-.card-item img {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  transform: translateZ(0);
-  will-change: transform;
-  user-select: none;
+/* === CUSTOM COMPONENTS (for @apply with custom colors/classes) === */
+@layer components {
+  /* === GLOBAL UTILS === */
+  a {
+    /* Use direct colors instead of @apply for custom colors */
+    color: #38bdf8; /* electric-blue */
+    transition-property: color;
+    transition-duration: 300ms;
+  }
+  a:hover {
+    color: #a78bfa; /* neon-purple */
+  }
+
+  /* === BUTTONS === */
+  .btn {
+    @apply py-2 px-4 font-semibold rounded-xl-2 transition duration-300 ease-in-out;
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
+  }
+
+  .btn-glow {
+    @apply bg-electric-blue hover:bg-neon-purple shadow-glow-blue text-white;
+  }
+
+  .btn-pink {
+    @apply bg-neon-pink hover:bg-glow-blue text-white;
+  }
+
+  /* === INPUTS & FORMS === */
+  input,
+  textarea {
+    @apply bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded-xl-2 w-full focus:outline-none focus:ring-2 focus:ring-electric-blue transition duration-300;
+  }
+
+  /* Optional input variant with soft glow */
+  .input-glow {
+    @apply border border-glow-blue bg-gray-900 text-white px-4 py-2 rounded-xl-2 shadow-inner focus:ring-glow-blue;
+  }
+
+  /* Darker input variant */
+  .input-dark {
+    @apply bg-[#0b1120] border border-gray-700 text-white px-4 py-2 rounded-xl-2;
+  }
+
+  /* === TAGS === */
+  .bubble {
+    @apply text-xs font-semibold px-3 py-1 rounded-full inline-block whitespace-nowrap select-none;
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+  }
+
+  /* === CARD STYLES === */
+  .card-glow {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    border-radius: 1.25rem;
+    padding: 1rem;
+  }
+
+  .card-hype {
+    @apply p-4 rounded-xl-2 shadow-xl transition duration-300;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 20px rgba(255, 0, 200, 0.2);
+  }
+
+  /* === FROSTED GLASS === */
+  .glass {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.25rem;
+  }
 }
 
-/* Button transition scope */
-button.absolute.top-1.right-1 {
-  transition: opacity 0.15s ease-in-out !important;
+/* === ANIMATIONS === */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
 }
 
-/* Mobile Responsive */
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+/* === RESPONSIVE === */
 @media (max-width: 640px) {
   body {
     font-size: 14px;
     padding: 0 10px;
   }
-  .card-item {
-    flex-direction: column;
-    padding: 10px;
-  }
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-  .grid-cols-2 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .grid-cols-3 {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .grid-cols-4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 
-/* React root should not block scrolling */
-#root,
-#root > div {
-  min-height: 100vh;
-  height: auto;
-  display: flex;
-  flex-direction: column;
-}
+  @layer components {
+    .btn {
+      @apply text-sm px-3 py-2;
+    }
 
-/* Bubble style for rarity, colors, count */
-.bubble {
-  background-color: rgba(0, 0, 0, 0.85); /* blackish background */
-  color: white;                          /* white text */
-  border-radius: 9999px;                 /* fully rounded */
-  padding: 0.25rem 0.75rem;              /* px-3 py-1 approx */
-  font-size: 0.75rem;                   /* text-xs */
-  font-weight: 600;                     /* font-semibold */
-  user-select: none;
-  display: inline-block;
-  white-space: nowrap;
+    input,
+    textarea {
+      @apply text-sm;
+    }
+
+    a {
+      /* Use direct CSS color declarations for responsiveness as well */
+      color: #38bdf8; /* electric-blue */
+      transition-property: color;
+      transition-duration: 300ms;
+    }
+    a:hover {
+      color: #a78bfa; /* neon-purple */
+    }
+  }
 }
