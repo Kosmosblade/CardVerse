@@ -1,0 +1,8 @@
+.background-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(45deg, #123456, #654321);
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: -1;
+}

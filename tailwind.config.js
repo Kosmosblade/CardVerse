@@ -1,8 +1,12 @@
+// tailwind.config.js
 const plugin = require('tailwindcss/plugin');
 
 module.exports = {
   darkMode: 'class',
-  content: ['./src/**/*.{js,jsx,ts,tsx}'],
+  content: [
+    './pages/**/*.{js,jsx,ts,tsx}',
+    './components/**/*.{js,jsx,ts,tsx}',
+  ],
   theme: {
     extend: {
       colors: {
@@ -58,12 +62,11 @@ module.exports = {
     },
   },
   plugins: [
-    require('@tailwindcss/line-clamp'),
     plugin(function ({ addComponents, theme }) {
       addComponents({
         '.btn-glow': {
           backgroundColor: theme('colors.glow-blue'),
-          borderRadius: theme('borderRadius.xl-2'), // changed from md to your custom
+          borderRadius: theme('borderRadius.xl-2'),
           color: '#fff',
           fontWeight: 'bold',
           padding: `${theme('spacing.2')} ${theme('spacing.4')}`,
@@ -76,7 +79,7 @@ module.exports = {
         },
         '.input-glass': {
           backgroundColor: theme('colors.glass'),
-          borderRadius: theme('borderRadius.xl-2'), // changed from xl to xl-2
+          borderRadius: theme('borderRadius.xl-2'),
           border: '1px solid rgba(255, 255, 255, 0.1)',
           padding: `${theme('spacing.2')} ${theme('spacing.4')}`,
           color: '#fff',

@@ -1,9 +1,0 @@
-/* src/styles/Background.css */
-
-.background-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.3); /* dark overlay for readability */
-  pointer-events: none; /* let clicks through */
-  z-index: -1;
-}
