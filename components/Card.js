@@ -1,26 +1,32 @@
-// src/components/Card.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import Link from 'next/link';
 
-export default function Card({ card, count = 1 }) {
+// Memoize for performance, re-renders only if card or count changes
+const Card = memo(function Card({ card, count = 1 }) {
   const [imageSrc, setImageSrc] = useState(null);
 
   useEffect(() => {
     if (card) {
-      const imageUrl = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal;
-      const cachedImage = localStorage.getItem(imageUrl);
-
-      if (cachedImage) {
-        setImageSrc(cachedImage);
-      } else {
-        setImageSrc(imageUrl);
-      }
+      // Prefer front face image if card_faces exists
+      const imageUrl =
+        card.image_uris?.normal ||
+        card.card_faces?.[0]?.image_uris?.normal ||
+        '/placeholder.jpg';
+      setImageSrc(imageUrl);
     }
   }, [card]);
 
-  const handleImageLoad = (url) => {
-    localStorage.setItem(url, url);
-  };
+  const oracleText = card?.oracle_text || 'No oracle text available';
+  const price =
+    card?.prices?.usd && !isNaN(parseFloat(card.prices.usd))
+      ? parseFloat(card.prices.usd).toFixed(2)
+      : null;
+  const colors = card?.color_identity?.length
+    ? card.color_identity.join(', ')
+    : null;
+  const rarity = card?.rarity
+    ? card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)
+    : null;
 
   if (!card) {
     return (
@@ -34,10 +40,6 @@ export default function Card({ card, count = 1 }) {
     );
   }
 
-  const oracleText = card.oracle_text || 'No oracle text available';
-  const price = card.prices?.usd ? parseFloat(card.prices.usd).toFixed(2) : 'N/A';
-  const colors = card.color_identity?.length ? card.color_identity.join(', ') : 'N/A';
-
   return (
     <Link href={`/card/${card.id}`} passHref legacyBehavior>
       <a
@@ -48,14 +50,13 @@ export default function Card({ card, count = 1 }) {
           <img
             src={imageSrc}
             alt={card.name}
-            className="mb-3 rounded-md shadow-md w-full max-h-[310px] object-cover"
+            className="mb-3 rounded-md shadow-md w-full max-h-[310px] object-contain"
             loading="lazy"
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src = 'https://via.placeholder.com/223x310?text=No+Image';
+              e.target.src = '/placeholder.jpg';
             }}
             draggable={false}
-            onLoad={() => handleImageLoad(imageSrc)}
           />
         ) : (
           <div className="h-44 w-full bg-gray-200 rounded-md mb-4 flex items-center justify-center text-gray-400">
@@ -63,24 +64,22 @@ export default function Card({ card, count = 1 }) {
           </div>
         )}
 
-        <h2 className="text-xl font-bold text-white">{card.name}</h2>
+        <h2 className="text-xl font-bold text-white truncate w-full">{card.name}</h2>
 
         <div className="flex flex-wrap justify-center gap-2 mt-2">
-          <span className="bubble text-white">
-            {card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)}
-          </span>
-          {card.color_identity && card.color_identity.length > 0 && (
-            <span className="bubble text-white">{colors}</span>
-          )}
+          {rarity && <span className="bubble text-white">{rarity}</span>}
+          {colors && <span className="bubble text-white">{colors}</span>}
         </div>
 
-        <p className="text-sm text-gray-400 mt-1">{card.set_name}</p>
+        <p className="text-sm text-gray-400 mt-1 truncate w-full" title={card.set_name}>
+          {card.set_name || 'Unknown Set'}
+        </p>
 
-        {price !== 'N/A' && (
+        {price !== null && (
           <p className="mt-2 text-emerald-500 font-semibold text-lg">${price}</p>
         )}
 
-        <div className="text-sm mt-1 text-white">
+        <div className="text-sm mt-1 text-white truncate w-full" title={card.mana_cost || 'N/A'}>
           <strong>Mana Cost:</strong> {card.mana_cost || 'N/A'}
         </div>
 
@@ -95,4 +94,6 @@ export default function Card({ card, count = 1 }) {
       </a>
     </Link>
   );
-}
+});
+
+export default Card;

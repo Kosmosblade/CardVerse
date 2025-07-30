@@ -1,6 +1,7 @@
 // pages/_app.js
 import '../styles/background.css';
 import '../styles/globals.css';
+import styles from '../styles/Inventory.module.css'; // if you have this file
 import NavBar from '../components/NavBar';
 import SearchBar from '../components/SearchBar';
 import Card from '../components/Card';

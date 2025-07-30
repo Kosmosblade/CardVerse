@@ -10,7 +10,6 @@ import React, {
 import { useRouter } from 'next/router';
 import { supabase } from '../supabaseClient';
 import CardCountDisplay from '../components/CardCountDisplay';
-//import '../styles/Inventory.css';  // Assuming you move Inventory.css to styles/
 
 const CardItem = memo(function CardItem({
   card,
@@ -103,11 +102,10 @@ export default function Inventory() {
   const [hoveredCard, setHoveredCard] = useState(null);
   const hoveredCardRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(50);
+  const pageSize = 50;
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const router = useRouter();
 
-  // Get user on mount
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
@@ -115,7 +113,6 @@ export default function Inventory() {
     });
   }, []);
 
-  // Fetch inventory cards when user, page, or refreshTrigger changes
   const fetchInventory = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -259,6 +256,7 @@ export default function Inventory() {
 
   const inventoryGrid = useMemo(
     () =>
+      
       inventory.map((card) => (
         <CardItem
           key={card.id}
@@ -283,7 +281,9 @@ export default function Inventory() {
   return (
     <div className="flex h-screen bg-[#0a1528] text-white relative">
       <div className="w-[240px] bg-[#0e1d35] p-3 pt-4 border-r border-blue-900 flex flex-col items-center">
-        <h1 className="text-xl font-bold text-center text-cyan-300 mb-4">CardVerse</h1>
+        <h1 className="text-xl font-bold text-center text-cyan-300 mb-4">
+          CardVerse
+        </h1>
 
         {hoveredCard ? (
           <>
@@ -384,7 +384,7 @@ export default function Inventory() {
           </div>
         </form>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 gap-1">
           {loading ? (
             <p className="col-span-full text-center text-blue-300">Loading...</p>
           ) : inventory.length === 0 ? (
