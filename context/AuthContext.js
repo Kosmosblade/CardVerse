@@ -1,6 +1,5 @@
-// context/AuthContext.js
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase'; // adjust path if needed
 
 const AuthContext = createContext();
 
@@ -15,6 +14,7 @@ export function AuthProvider({ children }) {
 
     // Subscribe to auth state changes (login/logout)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // <-- Here is the fix: use session?.user (not session?.session?.user)
       setUser(session?.user || null);
     });
 

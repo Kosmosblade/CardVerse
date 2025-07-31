@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase';
 import CardCountDisplay from '../components/CardCountDisplay';
 
 const CardItem = memo(function CardItem({
@@ -362,7 +362,7 @@ export default function Inventory() {
                 onChange={(e) => setCardName(e.target.value)}
                 className="w-full bg-black text-white border border-gray-600 rounded px-3 py-2"
                 placeholder="Black Lotus"
-                autoComplete="off"
+                autoComplete="on"
               />
             </div>
             <div className="w-20">
