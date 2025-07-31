@@ -6,13 +6,75 @@ import NavBar from '../components/NavBar';
 import SearchBar from '../components/SearchBar';
 import Card from '../components/Card';
 import { AuthProvider } from '../context/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
+import { supabase } from '../lib/supabase'; // adjust path if needed
 
 export default function MyApp({ Component, pageProps }) {
   const [query, setQuery] = useState('');
   const [cards, setCards] = useState([]);
   const router = useRouter();
+
+  // Auth user and profile state
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef();
+
+  // Load auth session & listen for changes
+  useEffect(() => {
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession();
+      setUser(data?.session?.user ?? null);
+    }
+    loadSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  // Fetch profile data when user changes
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+
+    async function fetchProfile() {
+      const cleanUserId = user.id.replace(/[<>]/g, '');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username, avatar_url, subscription_type, current_card_count')
+        .eq('id', cleanUserId)
+        .single();
+
+      if (!error && data) {
+        setProfile(data);
+      } else {
+        setProfile(null);
+      }
+    }
+
+    fetchProfile();
+  }, [user]);
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   // Discord webhook helper function
   const sendDiscordWebhook = async (card) => {
@@ -80,7 +142,6 @@ export default function MyApp({ Component, pageProps }) {
       console.log('[Card Fetched]', data);
       await sendDiscordWebhook(data);
 
-      // Optional: navigate to homepage if not already there
       if (router.pathname !== '/') {
         router.push('/');
       }
@@ -102,6 +163,62 @@ export default function MyApp({ Component, pageProps }) {
 
         {/* Navbar */}
         <NavBar />
+
+        {/* User menu top-right */}
+        {user && (
+          <div className="fixed top-4 right-4 z-50" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-haspopup="true"
+              aria-expanded={menuOpen}
+              className="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-600 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+              type="button"
+              title="User menu"
+            >
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="User avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white font-bold select-none">
+                  {profile?.username ? profile.username.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
+            </button>
+
+            {menuOpen && (
+              <div className="mt-2 w-56 bg-[#0b1f3a] rounded-lg shadow-lg border border-blue-700 text-white font-sans select-none">
+                <div className="p-4 border-b border-blue-700">
+                  <p className="font-semibold truncate" title={profile?.username || user.email || user.id}>
+                    {profile?.username || user.email || user.id}
+                  </p>
+                </div>
+                <div className="p-4 space-y-2 text-sm">
+                  <p>
+                    <strong>Subscription:</strong>{' '}
+                    {profile?.subscription_type
+                      ? profile.subscription_type.charAt(0).toUpperCase() + profile.subscription_type.slice(1)
+                      : 'Free'}
+                  </p>
+                  <p>
+                    <strong>Cards in Inventory:</strong>{' '}
+                    {typeof profile?.current_card_count === 'number' ? profile.current_card_count : 'N/A'}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      supabase.auth.signOut().then(() => {
+                        router.push('/');
+                      });
+                    }}
+                    className="mt-3 w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded transition"
+                    type="button"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Show search bar only on home page */}
         {router.pathname === '/' && (
