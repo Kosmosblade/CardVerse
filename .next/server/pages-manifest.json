@@ -1,11 +1,8 @@
 {
-  "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
+  "/_app": "pages/_app.js",
   "/_document": "pages/_document.js",
   "/card/[id]": "pages/card/[id].js",
-  "/": "pages/index.js",
   "/card-prints": "pages/card-prints.js",
-  "/inventory": "pages/inventory.js",
-  "/aicommanderdecks": "pages/aicommanderdecks.js",
-  "/[id]": "pages/[id].js"
+  "/": "pages/index.js"
 }
