@@ -1,0 +1,54 @@
+[33m4285cb2f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Stop tracking .next folder, added .gitignore
+[33m4de965aa[m Remove .next from repo and ignore it
+[33mb41c9bce[m Resolve merge conflicts
+[33maced8de6[m Resolve merge conflicts
+[33mb0e4ecdd[m Resolve merge conflicts
+[33m990e7695[m Resolve merge conflicts
+[33ma085205f[m Resolve merge conflicts
+[33md1207cbf[m merge
+[33m24e4d229[m merge
+[33m30fd5bf6[m merge
+[33mcfcecd73[m 🔧 Fix supabase import to match export style
+[33m6dec7fa5[m 🔧 Fix fix rebase
+[33mb38c6103[m 🚀 Add CardPrints page + view prints button on CardDetail
+[33m2e7992bd[m 🔧 Fix supabase import to match export style
+[33m7ee62ba9[m 🚀 Add CardPrints page + view prints button on CardDetail
+[33mc75cecb8[m Delete src directory
+[33ma95d3b81[m Remove old React build folder to fix Vercel deployment
+[33m7532c5c8[m Add all current files and changes before deploy
+[33md9085cad[m Fix: Migrated to next.js
+[33ma7710333[m WIP before running Next.js codemod
+[33mb3b92067[m Fix OpenAI API return format
+[33m6a071c55[m Add OpenAI chat API integration for AICommanderDecks page – this is the start of the AI deckbuilding workflow
+[33me1a22f84[m Update: - Moved Discord webhook logic back to App.js - Webhook now sends to Discord on card search using .env variable
+[33me493c919[m Full update: - Moved Discord webhook logic back to App.js for centralized handling - Fixed Discord webhook for single card search notifications on page - Removed old webhook code from SearchBar.js - General bug fixes and performance improvements
+[33m33f2c94e[m Full update: - Moved Discord webhook logic back to App.js for centralized handling - Fixed Discord webhook for single card search notifications on page - Removed old webhook code from SearchBar.js - General bug fixes and performance improvements
+[33m7da4481b[m Full update: - Moved Discord webhook logic from App.js to SearchBar.js for better separation of concerns - Fixed Discord webhook for single card search notifications on page - General bug fixes and performance improvements
+[33mbfeabaad[m Refactor: - Moved card search logic and Discord webhook from App.js to SearchBar.js - Cleaned up App.js for better separation of concerns
+[33m48a26206[m Full update:
+[33mf3eaf0a8[m Release v1.0: - Updated About page with Scryfall & Wizards of the Coast attribution - Added advanced search UI & navigation - Improved card inventory: live count, delete/add triggers, CardCountDisplay component - Fixed bug: correct card count pulled from inventory table - Polished UI/UX styling (tailwind config tweaks, SearchBar, Profile improvements)
+[33mf294e787[m Full update: - Added advanced search page and related components - Integrated Discord webhook for card search notifications - Fixed inventory refresh issues and card count display - Improved UI/UX for inventory and search features - Updated tailwind config and styling tweaks - General bug fixes and performance improvements
+[33m6186cf2d[m Updated user role logic, card limits, search functionality, and fixed Discord API integration
+[33mef8fc6cf[m fixed the front page with one search bar and showing the results cards that are searched
+[33m6abe1cff[m Fix inventory grid hover behavior and card preview, update to fully working state
+[33m438525a9[m Fixed card hover logic and optimized image loading
+[33m6b8d21a9[m Fix image caching by implementing localStorage for persistent image cache. Prevent unnecessary re-fetching of card images and improve performance.
+[33m36eca96d[m Fixed card item layout: Corrected button positions (Delete & Flip), Improved UI responsiveness.
+[33m438dea38[m Fixed card detail and inventory integration for Magic: The Gathering app
+[33m8a0047c6[m Add inventory feature with card management, hover preview, and Scryfall integration
+[33m45a0acd7[m ✨ Updated for prints to be clicked and show info on them
+[33m883fc5e7[m Fix View Prints button issue and improve logging
+[33mdf11fda6[m ✨ Updated CardDetail page with modern layout, oracle text, price, format legality display, and clean styling
+[33m43f16da4[m Fix AuthContext session handling and remove unused variable
+[33m2fe547be[m Full update: add/fix components and routing
+[33m5e9f35ef[m fix: wrap webhook payload with content for /api route
+[33m59a94353[m fix(api): use environment variable and fix payload handling in send-to-discord
+[33mf85f3f75[m fix: remove homepage and correct package.json formatting
+[33m5c7571d5[m chore: initialize mtgCardCatalog.json with valid JSON
+[33m17e34ca6[m ✅ Add Discord webhook integration and proxy server
+[33m153ab96d[m Add Discord webhook logging for deck builder card fetches and limit deck size to 150 cards
+[33m8aee11c9[m Improve DeckBuilder and Card component layouts and details
+[33m9e77e22b[m Fix logo image path to use PUBLIC_URL
+[33mfdacc6de[m Remove node_modules and .cache from Git tracking
+[33m3f019113[m Initial React frontend commit
+[33ma6188555[m Initial React frontend commit

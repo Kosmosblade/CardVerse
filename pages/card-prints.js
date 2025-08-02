@@ -1,63 +1,65 @@
-// src/components/CardPrints.js
-import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
 export default function CardPrints() {
   const router = useRouter();
-  const { query } = router;
-  const [prints, setPrints] = useState([]);
-  const [loadingPrints, setLoadingPrints] = useState(false);
-  const [fetchError, setFetchError] = useState(null);
+  const { name } = router.query;
 
-  // Card data is passed via router query or pageProps. 
-  // For this example, we expect card data passed via router query as JSON string or via state-like approach.
-  // If you are using Next.js 13+ with app router, you might use props or server fetch.
-  // Here, fallback to query param "card" as JSON string:
-  const card = React.useMemo(() => {
-    if (query.card) {
-      try {
-        return JSON.parse(query.card);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }, [query.card]);
+  const [prints, setPrints] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!card?.prints_search_uri) {
-      setFetchError('No prints_search_uri available.');
-      return;
-    }
+    if (!name) return;
 
     const fetchPrints = async () => {
-      setLoadingPrints(true);
-      setFetchError(null);
+      setLoading(true);
+      setError(null);
+
+      const query = encodeURIComponent(`!"${name}"`);
+      const url = `https://api.scryfall.com/cards/search?q=${query}&unique=prints`;
 
       try {
-        const res = await fetch(card.prints_search_uri);
+        const res = await fetch(url);
         const data = await res.json();
 
-        if (data.data) {
-          setPrints(data.data);
+        if (data.object === 'error') {
+          setError(data.details || 'Failed to fetch prints');
+          setPrints(null);
         } else {
-          setFetchError('No print data found.');
+          setPrints(data.data || []);
         }
-      } catch (err) {
-        console.error('Error fetching prints:', err);
-        setFetchError('Error fetching prints data.');
+      } catch {
+        setError('Failed to fetch prints');
+        setPrints(null);
       } finally {
-        setLoadingPrints(false);
+        setLoading(false);
       }
     };
 
     fetchPrints();
-  }, [card?.prints_search_uri]);
+  }, [name]);
 
-  if (!card) {
+  if (!name) {
     return (
       <div className="text-center mt-20 text-gray-300">
-        <p>Card data not found.</p>
+        <p>Waiting for card name...</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="text-center mt-20 text-gray-300">
+        <p>Loading prints for "{name}"...</p>
+      </div>
+    );
+  }
+
+  if (error || !prints) {
+    return (
+      <div className="text-center mt-20 text-gray-300">
+        <p>Error: {error || 'Unknown error'}</p>
         <button
           onClick={() => router.back()}
           className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
@@ -68,57 +70,76 @@ export default function CardPrints() {
     );
   }
 
-  // Navigate to card detail page passing print as JSON string in query (could also consider state or global store)
-  const handlePrintClick = (print) => {
-    router.push({
-      pathname: `/card/${card.id}`,
-      query: {
-        card: JSON.stringify(card),
-        print: JSON.stringify(print),
-      },
-    });
+  if (prints.length === 0) {
+    return (
+      <div className="text-center mt-20 text-gray-300">
+        <p>No prints found for "{name}".</p>
+        <button
+          onClick={() => router.back()}
+          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  const handleSelectPrint = (print) => {
+    // Navigate to card detail by scryfall_id
+    if (print.id) {
+      router.push(`/card/${print.id}`);
+    } else if (print.name) {
+      router.push(`/card/${encodeURIComponent(print.name)}`);
+    }
   };
 
   return (
     <div className="max-w-6xl mx-auto mt-12 px-6 py-8 bg-[#112b4a] text-white rounded-xl shadow-2xl">
-      <div className="flex flex-col items-center">
-        <h2 className="text-3xl font-bold mb-6">Alternate Printings for {card.name}</h2>
+      <h1 className="text-4xl font-bold mb-8 text-center">Prints for "{name}"</h1>
 
-        {loadingPrints && (
-          <div className="text-center mt-6 text-blue-200 text-sm">Loading alternate printings...</div>
-        )}
-
-        {fetchError && (
-          <div className="text-center mt-6 text-red-500 text-sm">{fetchError}</div>
-        )}
-
-        {prints.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {prints.map((p) => (
-              <div
-                key={p.id}
-                className="bg-[#0d223f] p-2 rounded-lg text-center shadow-md hover:shadow-xl transition cursor-pointer"
-                onClick={() => handlePrintClick(p)}
-              >
-                <img
-                  src={p.image_uris?.small || p.card_faces?.[0]?.image_uris?.small || 'https://via.placeholder.com/150x210?text=No+Image'}
-                  alt={p.name}
-                  className="rounded-md mb-2 mx-auto"
-                />
-                <p className="text-sm text-blue-100">{p.set_name}</p>
-                <p className="text-xs text-gray-300">{p.rarity}</p>
-              </div>
-            ))}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+        {prints.map((print) => (
+          <div
+            key={print.id}
+            onClick={() => handleSelectPrint(print)}
+            className="bg-[#0b1f3a] rounded-lg p-3 shadow-lg flex flex-col items-center cursor-pointer hover:scale-[1.02] transition-transform duration-200"
+          >
+            <img
+              src={
+                print.image_uris?.normal ||
+                print.card_faces?.[0]?.image_uris?.normal ||
+                ''
+              }
+              alt={print.name}
+              className="w-44 h-auto rounded-md mb-2"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'https://via.placeholder.com/223x310?text=No+Image';
+              }}
+              draggable={false}
+            />
+            <p className="text-center font-semibold text-lg">{print.set_name}</p>
+            <p className="text-center text-sm capitalize text-gray-300">{print.rarity}</p>
+            <a
+              href={print.scryfall_uri}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 text-sm text-pink-400 hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              View on Scryfall
+            </a>
           </div>
-        ) : (
-          !loadingPrints && <p className="text-center text-gray-400">No alternate printings found.</p>
-        )}
+        ))}
+      </div>
 
+      <div className="mt-8 flex justify-center">
         <button
           onClick={() => router.back()}
-          className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          className="px-6 py-2 bg-pink-600 text-white font-bold rounded-full shadow-lg hover:bg-pink-700 transition-all duration-300"
+          type="button"
         >
-          Go Back
+          Back
         </button>
       </div>
     </div>
