@@ -107,7 +107,7 @@ export default function AdvancedSearch() {
         setHasMore(false);
         setNextPageUrl(null);
       } else {
-        setResults(data.data.slice(0, 75));
+        setResults(data.data.slice(0, 60));
         setHasMore(data.has_more);
         setNextPageUrl(data.has_more ? data.next_page : null);
       }

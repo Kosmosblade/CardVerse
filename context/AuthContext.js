@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { supabase } from '../lib/supabase'; // adjust path if needed
+import { supabase } from '../lib/supabase';
+
 
 const AuthContext = createContext();
 
@@ -8,21 +9,23 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // Get current session user on mount
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data?.session?.user || null);
-    });
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data?.session?.user ?? null);
+    };
+    getSession();
 
-    // Subscribe to auth state changes (login/logout)
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      // <-- Here is the fix: use session?.user (not session?.session?.user)
-      setUser(session?.user || null);
+    // Subscribe to auth state changes
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
     });
 
     // Cleanup subscription on unmount
-    return () => listener?.subscription.unsubscribe();
+    return () => {
+      subscription?.subscription?.unsubscribe();
+    };
   }, []);
 
-  // Memoize value to optimize rerenders
   const value = useMemo(() => ({ user, setUser }), [user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
