@@ -7,16 +7,13 @@ export default function CardDetail() {
   const router = useRouter();
   const { id } = router.query;
 
-  // Auth session and user state
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Card data states
   const [card, setCard] = useState(null);
   const [print, setPrint] = useState(null);
 
-  // UI and form states
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState(null);
@@ -24,7 +21,6 @@ export default function CardDetail() {
   const [error, setError] = useState(null);
   const [flipped, setFlipped] = useState(false);
 
-  // Load session & user
   useEffect(() => {
     const initAuth = async () => {
       setAuthLoading(true);
@@ -43,7 +39,6 @@ export default function CardDetail() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Fetch card data
   useEffect(() => {
     if (!id) return;
     const fetchCard = async () => {
@@ -68,12 +63,8 @@ export default function CardDetail() {
     fetchCard();
   }, [id]);
 
-  // Reset flip
-  useEffect(() => {
-    setFlipped(false);
-  }, [card, print]);
+  useEffect(() => setFlipped(false), [card, print]);
 
-  // Add to inventory
   const handleAddToInventory = async () => {
     if (quantity < 1) {
       setMessage({ type: 'error', text: 'Quantity must be at least 1' });
@@ -90,8 +81,11 @@ export default function CardDetail() {
     const frontImage =
       print?.image_uris?.normal ||
       print?.card_faces?.[0]?.image_uris?.normal ||
-      card.image_uris?.normal;
-    const backImage = print?.card_faces?.[1]?.image_uris?.normal || null;
+      card.image_uris?.normal ||
+      card.card_faces?.[0]?.image_uris?.normal;
+    const backImage =
+      print?.card_faces?.[1]?.image_uris?.normal ||
+      card.card_faces?.[1]?.image_uris?.normal || null;
     const set_name = print?.set_name || card.set_name;
     const scryfall_uri = print?.scryfall_uri || card.scryfall_uri;
     const scryfall_id = print?.id || card.id;
@@ -132,7 +126,6 @@ export default function CardDetail() {
     }
   };
 
-  // Loading / error states
   if (loading) {
     return <div className="text-center mt-20 text-gray-300">Loading card data...</div>;
   }
@@ -157,13 +150,23 @@ export default function CardDetail() {
     );
   }
 
-  // Prepare display values
   const frontImage =
     print?.image_uris?.normal ||
+    print?.card_faces?.[0]?.image_uris?.normal ||
     card.image_uris?.normal ||
+    card.card_faces?.[0]?.image_uris?.normal ||
     'https://via.placeholder.com/223x310?text=No+Image';
-  const backImage = print?.card_faces?.[1]?.image_uris?.normal || null;
-  const oracleText = print?.oracle_text || card.oracle_text || 'No description';
+  const backImage =
+    print?.card_faces?.[1]?.image_uris?.normal ||
+    card.card_faces?.[1]?.image_uris?.normal || null;
+
+  const oracleText =
+    print?.oracle_text ||
+    print?.card_faces?.[0]?.oracle_text ||
+    card.oracle_text ||
+    card.card_faces?.[0]?.oracle_text ||
+    'No description';
+
   const rawPrice = print?.prices?.usd || card.prices?.usd;
   const displayPrice = rawPrice ? `$${parseFloat(rawPrice).toFixed(2)}` : 'N/A';
   const legalityList = Object.entries(card.legalities || {}).map(([fmt, st]) => ({
@@ -171,10 +174,12 @@ export default function CardDetail() {
     status: st.charAt(0).toUpperCase() + st.slice(1),
   }));
 
+  // Check if it's a transform card layout
+  const isTransformCard = (print?.layout || card.layout) === 'transform';
+
   return (
     <div className="max-w-6xl mx-auto mt-16 p-6 bg-[#112b4a] text-white rounded-xl shadow-2xl">
       <div className="flex flex-col lg:flex-row gap-10">
-        {/* Card image + flip */}
         <div className="flex-shrink-0 flex flex-col items-center perspective-800">
           <div className={`relative w-[280px] h-[390px] transform-style-preserve-3d transition-transform duration-700 ${flipped ? 'rotate-y-180' : ''}`}>
             <img
@@ -195,12 +200,13 @@ export default function CardDetail() {
               onClick={() => setFlipped(!flipped)}
               className="mt-4 px-4 py-2 bg-indigo-700 hover:bg-indigo-800 rounded select-none"
             >
-              {flipped ? 'Front' : 'Back'}
+              {flipped
+                ? isTransformCard ? 'Untransform' : 'Unflip'
+                : isTransformCard ? 'Transform' : 'Flip'}
             </button>
           )}
         </div>
 
-        {/* Card details */}
         <div className="flex-1 space-y-4">
           <h1 className="text-4xl font-extrabold">{card.name}</h1>
           <p className="text-sm text-blue-200">
@@ -235,7 +241,6 @@ export default function CardDetail() {
             </div>
           )}
 
-          {/* Add to Inventory */}
           <div className="mt-6 bg-[#0b1f3a] p-4 rounded-xl border border-blue-900">
             <h3 className="text-lg font-semibold text-blue-200 mb-2">Add to Inventory</h3>
             <div className="flex items-center gap-3">
@@ -268,7 +273,6 @@ export default function CardDetail() {
             )}
           </div>
 
-          {/* Navigation */}
           <div className="mt-6 flex gap-4">
             <button onClick={() => router.back()} className="px-4 py-2 bg-pink-600 hover:bg-pink-700 rounded-full text-white">
               Back

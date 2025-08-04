@@ -1,4 +1,3 @@
-// tailwind.config.js
 const plugin = require('tailwindcss/plugin');
 
 module.exports = {
@@ -43,6 +42,7 @@ module.exports = {
         'gradient-move': 'gradientMove 15s ease infinite',
         'flip-card': 'flipCard 0.6s ease-in-out',
         'fade-in': 'fadeIn 0.5s ease-out',
+        'pulse-glow': 'pulse-glow 2s infinite',
       },
       keyframes: {
         gradientMove: {
@@ -58,10 +58,19 @@ module.exports = {
           from: { opacity: 0, transform: 'translateY(10px)' },
           to: { opacity: 1, transform: 'translateY(0)' },
         },
+        'pulse-glow': {
+          '0%': { boxShadow: '0 0 0 0 rgba(59, 130, 246, 0.4)' },
+          '70%': { boxShadow: '0 0 0 10px rgba(59, 130, 246, 0)' },
+          '100%': { boxShadow: '0 0 0 0 rgba(59, 130, 246, 0)' },
+        },
       },
     },
   },
   plugins: [
+    // Add pseudo-elements plugin first
+    require('tailwindcss-pseudo-elements'),
+    
+    // Your existing custom utilities
     plugin(function ({ addComponents, theme }) {
       addComponents({
         '.btn-glow': {
@@ -96,5 +105,3 @@ module.exports = {
     }),
   ],
 };
-
-// y

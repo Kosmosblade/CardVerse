@@ -8,7 +8,7 @@ export default function Logout() {
 
   useEffect(() => {
     // Create audio and prepare it
-    const audio = new Audio('/sounds/forest-ambience.mp3');
+    const audio = new Audio('/sounds/logoutsoundlogout.mp3');
     audio.loop = true;
 
     // Try to play audio and catch autoplay restrictions
@@ -29,7 +29,7 @@ export default function Logout() {
         await playAudio();
         setTimeout(() => {
           router.push('/');
-        }, 2000);
+        }, 7000);
       } catch (error) {
         console.error('Logout error:', error);
         setLoggedOut(true);

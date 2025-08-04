@@ -16,6 +16,7 @@
     "framer-motion": "^12.23.11",
     "next": "^15.4.5",
     "node-fetch": "^3.3.2",
+    "openai": "^5.11.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "use-debounce": "^10.0.5"
@@ -23,6 +24,7 @@
   "devDependencies": {
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-pseudo-elements": "^2.0.0"
   }
 }

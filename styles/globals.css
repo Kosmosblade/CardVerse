@@ -20,7 +20,6 @@ body {
 @layer components {
   /* === GLOBAL UTILS === */
   a {
-    /* Use direct colors instead of @apply for custom colors */
     color: #38bdf8; /* electric-blue */
     transition-property: color;
     transition-duration: 300ms;
@@ -49,22 +48,19 @@ body {
     @apply bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded-xl-2 w-full focus:outline-none focus:ring-2 focus:ring-electric-blue transition duration-300;
   }
 
-  /* Optional input variant with soft glow */
   .input-glow {
     @apply border border-glow-blue bg-gray-900 text-white px-4 py-2 rounded-xl-2 shadow-inner focus:ring-glow-blue;
   }
 
-  /* Darker input variant */
   .input-dark {
     @apply bg-[#0b1120] border border-gray-700 text-white px-4 py-2 rounded-xl-2;
   }
 
-  /* === FOCUS VISIBLE (Accessibility) === */
   input:focus-visible,
   button:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
-    outline: 2px solid #38bdf8; /* electric-blue */
+    outline: 2px solid #38bdf8;
     outline-offset: 2px;
   }
 
@@ -91,7 +87,6 @@ body {
     box-shadow: 0 0 20px rgba(255, 0, 200, 0.2);
   }
 
-  /* === FROSTED GLASS === */
   .glass {
     backdrop-filter: blur(12px);
     background: rgba(255, 255, 255, 0.03);
@@ -135,13 +130,21 @@ body {
     }
 
     a {
-      /* Use direct CSS color declarations for responsiveness as well */
-      color: #38bdf8; /* electric-blue */
+      color: #38bdf8;
       transition-property: color;
       transition-duration: 300ms;
     }
     a:hover {
-      color: #a78bfa; /* neon-purple */
+      color: #a78bfa;
     }
   }
+}
+
+/* === USER MENU GLOW === */
+.user-menu-btn {
+  @apply relative;
+}
+.user-menu-btn::after {
+  content: '';
+  @apply absolute inset-0 rounded-full border border-blue-500 blur-sm opacity-50 animate-pulse;
 }

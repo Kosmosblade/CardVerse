@@ -1,7 +1,5 @@
 // pages/_app.js
-import '../styles/background.css';
 import '../styles/globals.css';
-import styles from '../styles/Inventory.module.css';
 import NavBar from '../components/NavBar';
 import SearchBar from '../components/SearchBar';
 import Card from '../components/Card';
@@ -22,6 +20,7 @@ export default function MyApp({ Component, pageProps }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef();
 
+  // Load Supabase session
   useEffect(() => {
     async function loadSession() {
       const { data } = await supabase.auth.getSession();
@@ -32,16 +31,15 @@ export default function MyApp({ Component, pageProps }) {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
-
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Fetch user profile
   useEffect(() => {
     if (!user) {
       setProfile(null);
       return;
     }
-
     async function fetchProfile() {
       const cleanUserId = user.id.replace(/[<>]/g, '');
       const { data, error } = await supabase
@@ -49,34 +47,28 @@ export default function MyApp({ Component, pageProps }) {
         .select('username, avatar_url, subscription_type, current_card_count')
         .eq('id', cleanUserId)
         .single();
-
-      if (!error && data) {
-        setProfile(data);
-      } else {
-        setProfile(null);
-      }
+      if (!error && data) setProfile(data);
+      else setProfile(null);
     }
-
     fetchProfile();
   }, [user]);
 
+  // Close menu on outside click
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
       }
     }
-    if (menuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
-    }
+    if (menuOpen) document.addEventListener('mousedown', handleClickOutside);
+    else document.removeEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
+  // Discord webhook helper
   const sendDiscordWebhook = async (card) => {
     const payload = {
-      username: 'Conjuring Crypt Bot',
+      username: 'Conjuerers Crypt Bot',
       embeds: [
         {
           title: `Card Searched: ${card.name}`,
@@ -93,57 +85,43 @@ export default function MyApp({ Component, pageProps }) {
         },
       ],
     };
-
     try {
       const res = await fetch('/api/send-to-discord', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error('[Webhook Error]', {
-          status: res.status,
-          statusText: res.statusText,
-          response: errorText,
-          payload,
-        });
+        const errText = await res.text();
+        console.error('[Webhook Error]', { status: res.status, statusText: res.statusText, errText, payload });
       } else {
-        console.log('[✅ Webhook Success]', await res.json());
+        console.log('[Webhook Success]', await res.json());
       }
     } catch (err) {
       console.error('[Webhook Exception]', err);
     }
   };
 
+  // Card search handler
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
-
     try {
       const res = await fetch(
         `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(query.trim())}`
       );
       const data = await res.json();
-
       if (data.object === 'error') {
         alert('Card not found');
-        console.warn('[Scryfall Error]', data);
         setCards([]);
         return;
       }
-
       setCards([data]);
-      console.log('[Card Fetched]', data);
       await sendDiscordWebhook(data);
-
-      if (router.pathname !== '/') {
-        router.push('/');
-      }
-    } catch (error) {
+      if (router.pathname !== '/') router.push('/');
+    } catch (err) {
       alert('Error fetching card data');
-      console.error('[Search Exception]', error);
+      console.error(err);
     }
   };
 
@@ -177,7 +155,7 @@ export default function MyApp({ Component, pageProps }) {
             <div className="max-w-6xl mx-auto px-6 mt-6 mb-12 w-full">
               <AnimatePresence>
                 <motion.div
-                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-center items-center"
+                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
@@ -192,27 +170,18 @@ export default function MyApp({ Component, pageProps }) {
           )}
 
           <main className="flex-grow flex justify-center items-center p-6 max-w-6xl mx-auto mt-12">
-            {router.pathname === '/' ? (
-              <Component {...pageProps} query={query} />
-            ) : (
-              <Component {...pageProps} />
-            )}
+            <Component {...pageProps} query={query} />
           </main>
 
           <footer className="bg-[#112b4a] border-t mt-20 p-4 text-center text-sm text-yellow-500 shadow-inner">
             <p style={{ fontSize: '0.8em', color: 'gray', marginBottom: '0.5rem' }}>
               Card data and images © Wizards of the Coast. Data provided by{' '}
-              <a
-                href="https://scryfall.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
+              <a href="https://scryfall.com" target="_blank" rel="noopener noreferrer" className="underline">
                 Scryfall
               </a>
-              . This site is not affiliated with, endorsed, or sponsored by Wizards of the Coast LLC.
+              . Unaffiliated with Wizards of the Coast LLC.
             </p>
-            &copy; {new Date().getFullYear()} Conjuring Crypt. All rights reserved.
+            &copy; {new Date().getFullYear()} Conjuerers Crypt. All rights reserved.
           </footer>
         </div>
       </CardCountProvider>
@@ -220,60 +189,88 @@ export default function MyApp({ Component, pageProps }) {
   );
 }
 
+// ====================================================================
+//  UserMenu: uses .user-menu-btn for glow border via your globals.css
+// ====================================================================
 function UserMenu({ profile, user, menuOpen, setMenuOpen, menuRef }) {
   const { cardCount } = useCardCount();
+  const timeoutRef = useRef();
+
+  // auto-close after 15s
+  useEffect(() => {
+    if (menuOpen) timeoutRef.current = setTimeout(() => setMenuOpen(false), 15000);
+    return () => clearTimeout(timeoutRef.current);
+  }, [menuOpen]);
 
   return (
     <div className="fixed top-4 right-4 z-50" ref={menuRef}>
-      <button
-        onClick={() => setMenuOpen(!menuOpen)}
-        aria-haspopup="true"
-        aria-expanded={menuOpen}
-        className="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-600 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-        type="button"
-        title="User menu"
-      >
-        {profile?.avatar_url ? (
-          <img src={profile.avatar_url} alt="User avatar" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white font-bold select-none">
-            {profile?.username ? profile.username.charAt(0).toUpperCase() : 'U'}
-          </div>
-        )}
-      </button>
-
-      {menuOpen && (
-        <div className="mt-2 w-56 bg-[#0b1f3a] rounded-lg shadow-lg border border-blue-700 text-white font-sans select-none">
-          <div className="p-4 border-b border-blue-700">
-            <p className="font-semibold truncate" title={profile?.username || user.email || user.id}>
-              {profile?.username || user.email || user.id}
-            </p>
-          </div>
-          <div className="p-4 space-y-2 text-sm">
-            <p>
-              <strong>Subscription:</strong>{' '}
-              {profile?.subscription_type
-                ? profile.subscription_type.charAt(0).toUpperCase() + profile.subscription_type.slice(1)
-                : 'Free'}
-            </p>
-            <p>
-              <strong>Cards in Inventory:</strong> {cardCount}
-            </p>
-            <button
-              onClick={() => {
-                setMenuOpen(false);
-                supabase.auth.signOut().then(() => {
-                  window.location.href = '/';
-                });
-              }}
-              className="mt-3 w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded transition"
-              type="button"
-            >
-              Log Out
-            </button>
-          </div>
-        </div>
+      {!menuOpen && (
+        <button
+          onClick={() => setMenuOpen(true)}
+          className="user-menu-btn w-10 h-10 rounded-full overflow-hidden border-2 border-blue-600 shadow-md hover:shadow-blue-500 transition-all duration-300"
+          title="User menu"
+        >
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white font-bold">
+              {profile?.username?.charAt(0).toUpperCase() || 'U'}
+            </div>
+          )}
+        </button>
       )}
+
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            key="usermenu"
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.25 }}
+            className="mt-2 w-72 bg-[#0e2748]/90 backdrop-blur-md rounded-xl shadow-xl border border-blue-700 text-white font-sans overflow-hidden"
+          >
+            <div className="flex items-center gap-3 p-4 border-b border-blue-700">
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-blue-500">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                    {profile?.username?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold truncate">{profile?.username || user?.email}</span>
+                <span className="text-xs text-blue-300">Online</span>
+              </div>
+            </div>
+
+            <div className="px-4 py-3 space-y-2 text-sm">
+              <p>
+                <strong className="text-blue-400">Subscription:</strong>{' '}
+                {profile?.subscription_type
+                  ? profile.subscription_type[0].toUpperCase() + profile.subscription_type.slice(1)
+                  : 'Free'}
+              </p>
+              <p>
+                <strong className="text-blue-400">Cards in Inventory:</strong> {cardCount}
+              </p>
+              <button
+                onClick={() => {
+                  clearTimeout(timeoutRef.current);
+                  setMenuOpen(false);
+                  supabase.auth.signOut().then(() => (window.location.href = '/'));
+                }}
+                className="relative w-full py-2 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium transition-all duration-300 shadow-md border border-rose-800"
+              >
+                <span className="relative z-10">Log Out</span>
+                <span className="absolute inset-0 rounded-md opacity-30 blur-md bg-gradient-to-r from-rose-500 to-rose-700 animate-pulse z-0" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

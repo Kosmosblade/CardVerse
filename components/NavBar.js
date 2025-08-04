@@ -1,109 +1,116 @@
-// components/NavBar.js
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { motion, AnimatePresence } from "framer-motion";
+
+const links = [
+  { name: "Browse Cards", href: "/" },
+  { name: "My Decks", href: "/decks" },
+  { name: "Inventory", href: "/inventory" },
+  { name: "AICommanderDeck", href: "/aicommanderdecks" },
+  { name: "About", href: "/about" },
+  { name: "Login", href: "/login" },
+  { name: "Signup", href: "/signup" },
+  { name: "Profile", href: "/profile" },
+  { name: "Logout", href: "/logout" },
+];
 
 export default function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
+  const navRef = useRef(null);
 
-  const links = [
-    { name: "Browse Cards", href: "/" },
-    { name: "My Decks", href: "/decks" },
-    { name: "Inventory", href: "/inventory" },
-    { name: "AICommanderDeck", href: "/aicommanderdecks" },
-    { name: "About", href: "/about" },
-    { name: "Login", href: "/login" },
-    { name: "Signup", href: "/signup" },
-    { name: "Profile", href: "/profile" },
-    { name: "Logout", href: "/logout" },
-  ];
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
+  const linkVariants = {
+    hidden: { opacity: 0, x: -30 },
+    visible: (i) => ({
+      opacity: 1,
+      x: 0,
+      transition: { delay: i * 0.1 + 0.3 },
+    }),
+  };
 
   return (
-    <div>
+    <>
       {!menuOpen && (
         <button
           onClick={() => setMenuOpen(true)}
-          className="fixed right-4 bottom-4 z-50 p-0 bg-transparent border-none focus:outline-none"
           aria-label="Open Menu"
           type="button"
+          className="fixed top-8 left-8 z-50 p-0 bg-transparent rounded-full hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-400"
         >
           <img
-            src="/assets/menu-icon.png"
-            alt="Menu Icon"
-            className="w-8 h-8 object-cover"
-            onError={(e) => (e.target.src = "/assets/default-icon.png")}
+            src="/assets/Conjurer.png"
+            alt="Conjurers Crypt Logo"
+            className="h-10 w-auto select-none"
+            draggable={false}
           />
         </button>
       )}
 
-      <nav
-        className={`fixed top-0 right-0 h-full w-64 shadow-lg transform ${
-          menuOpen ? "translate-x-0" : "translate-x-full"
-        } transition-transform duration-300`}
-        style={{
-          backgroundImage: "url(/assets/navbar-background.png)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          backgroundColor: "rgba(0, 0, 0, 0.4)",
-        }}
-      >
-        <div className="flex items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-3">
-            <img
-              src="/assets/logo.png"
-              alt="Conjuring Crypt Logo"
-              className="h-12 w-auto drop-shadow-md"
-              draggable={false}
-            />
-            <span className="text-3xl font-extrabold text-white tracking-wide select-none">
-              Conjuring <span className="text-indigo-500">Crypt</span>
-            </span>
-          </Link>
-
-          <button
-            onClick={() => setMenuOpen(false)}
-            className="text-white hover:bg-gray-200 p-2 rounded-md md:hidden"
-            aria-label="Close Menu"
-            type="button"
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.nav
+            ref={navRef}
+            className="fixed top-0 left-0 h-full w-72 backdrop-blur-lg bg-white/10 shadow-xl z-40 border-r border-indigo-600"
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <ul className="flex flex-col space-y-4 px-6 py-2">
-          {links.map(({ name, href }) => {
-            const isActive = router.pathname === href;
-            return (
-              <li key={href}>
-                <Link
-                  href={href}
+            <div className="w-full h-24 mb-8 flex items-center justify-center p-2">
+              <Link href="/">
+                <img
+                  src="/assets/logoC.png"
+                  alt="Conjurers Crypt Logo"
+                  className="h-full w-auto object-contain select-none drop-shadow-md"
+                  draggable={false}
                   onClick={() => setMenuOpen(false)}
-                  className={`text-lg font-medium ${
-                    isActive ? "text-indigo-500 font-bold" : "text-gray-200"
-                  } hover:text-indigo-500 transition duration-200 hover:underline hover:underline-offset-4`}
-                >
-                  {name}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-    </div>
+                />
+              </Link>
+            </div>
+
+            <ul className="flex flex-col space-y-4 px-6">
+              {links.map(({ name, href }, i) => {
+                const isActive = router.pathname === href;
+                return (
+                  <motion.li
+                    key={href}
+                    custom={i}
+                    variants={linkVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                  >
+                    <Link
+                      href={href}
+                      className={`inline-block text-lg font-semibold transition-colors duration-200 w-fit rounded-md py-1 px-1 leading-none ${
+                        isActive ? "text-indigo-400" : "text-gray-300 hover:text-indigo-400"
+                      }`}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      {name}
+                    </Link>
+                  </motion.li>
+                );
+              })}
+            </ul>
+          </motion.nav>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

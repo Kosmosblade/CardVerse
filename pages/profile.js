@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase'; // adjust path if needed
 
 export default function Profile() {
   const [user, setUser] = useState(null);
@@ -216,10 +216,7 @@ export default function Profile() {
               </div>
             )}
           </div>
-
-          <p>
-            <strong>Email:</strong> <span className="text-gray-300">{user.email}</span>
-          </p>
+          
           <p>
             <strong>Created:</strong>{' '}
             <span className="text-gray-300">{new Date(user.created_at).toLocaleString()}</span>

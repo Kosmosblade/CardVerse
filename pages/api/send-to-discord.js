@@ -1,5 +1,3 @@
-// pages/api/send-to-discord.js
-
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -9,16 +7,21 @@ export default async function handler(req, res) {
   }
   
   try {
-    const payload = req.body;
+    const { usePrivate, ...payload } = req.body;
 
     console.log('[DiscordWebhook] Received payload:', JSON.stringify(payload, null, 2));
-    
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+    console.log('[DiscordWebhook] usePrivate:', usePrivate);
+
+    const webhookUrl = usePrivate
+      ? process.env.DISCORD_PRIVATE_WEBHOOK_URL
+      : process.env.DISCORD_WEBHOOK_URL;
+
     if (!webhookUrl) {
       console.error('[DiscordWebhook] Webhook URL not configured!');
       return res.status(500).json({ error: 'Webhook URL not configured' });
     }
-    console.log('[DiscordWebhook] Using webhook URL:', 'SET');
+
+    console.log('[DiscordWebhook] Using webhook URL:', usePrivate ? 'PRIVATE' : 'PUBLIC');
 
     const discordRes = await fetch(webhookUrl, {
       method: 'POST',
@@ -33,7 +36,7 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'Discord webhook failed', details: text });
     }
 
-    return res.status(200).json({ message: 'Webhook sent' });
+    return res.status(200).json({ message: `Webhook sent to ${usePrivate ? 'private' : 'public'} channel` });
   } catch (err) {
     console.error('[DiscordWebhook] Handler error:', err);
     return res.status(500).json({ error: 'Server error', details: err.message });

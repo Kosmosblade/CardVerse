@@ -1,6 +1,8 @@
-// pages/api/chat.js
+import { OpenAI } from 'openai';
 
-// API route for AI Assistant chat
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -13,33 +15,30 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing or invalid messages array' });
   }
 
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('Missing OPENAI_API_KEY in environment');
+    return res.status(500).json({ error: 'OpenAI API key not configured.' });
+  }
+
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: messages.map((m) => ({
-          role: m.role,
-          content: m.text || m.content, // support both 'text' and 'content' keys
-        })),
-        temperature: 0.7,
-      }),
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.text ?? m.content ?? '',
+      })),
+      temperature: 0.8,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json({ error: data });
+    if (!response.choices || response.choices.length === 0) {
+      console.error('No response choices from OpenAI API');
+      return res.status(500).json({ error: 'No response from AI.' });
     }
 
-    const aiMessage = data.choices?.[0]?.message?.content || 'No response from AI.';
+    const aiMessage = response.choices[0].message.content || 'No response from AI.';
     return res.status(200).json({ reply: aiMessage });
   } catch (err) {
-    console.error('API error:', err);
+    console.error('Server error contacting OpenAI:', err);
     return res.status(500).json({ error: 'Server error contacting OpenAI.' });
   }
 }
