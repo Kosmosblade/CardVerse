@@ -1,4 +1,3 @@
-// pages/card/[id].js
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -77,23 +76,64 @@ export default function CardDetail() {
     setAdding(true);
     setMessage(null);
 
-    const name = print?.name || card.name;
-    const frontImage =
-      print?.image_uris?.normal ||
-      print?.card_faces?.[0]?.image_uris?.normal ||
-      card.image_uris?.normal ||
-      card.card_faces?.[0]?.image_uris?.normal;
-    const backImage =
-      print?.card_faces?.[1]?.image_uris?.normal ||
-      card.card_faces?.[1]?.image_uris?.normal || null;
-    const set_name = print?.set_name || card.set_name;
-    const scryfall_uri = print?.scryfall_uri || card.scryfall_uri;
-    const scryfall_id = print?.id || card.id;
-    const rawPrice = print?.prices?.usd || card.prices?.usd;
-    const price = rawPrice ? parseFloat(rawPrice) : 0;
-    const user_id = user.id;
-
     try {
+      const name = print?.name || card.name;
+      const scryfall_id = print?.id || card.id;
+      const user_id = user.id;
+
+      // Check if card already exists for this user
+      const { data: existingCard, error: fetchError } = await supabase
+        .from('inventory')
+        .select('id, quantity')
+        .eq('scryfall_id', scryfall_id)
+        .eq('user_id', user_id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      const frontImage =
+        print?.image_uris?.normal ||
+        print?.card_faces?.[0]?.image_uris?.normal ||
+        card.image_uris?.normal ||
+        card.card_faces?.[0]?.image_uris?.normal;
+      const backImage =
+        print?.card_faces?.[1]?.image_uris?.normal ||
+        card.card_faces?.[1]?.image_uris?.normal ||
+        null;
+      const set_name = print?.set_name || card.set_name;
+      const scryfall_uri = print?.scryfall_uri || card.scryfall_uri;
+      const rawPrice = print?.prices?.usd || card.prices?.usd;
+      const price = rawPrice ? parseFloat(rawPrice) : 0;
+
+      let colors = [];
+      const source = print || card;
+      if (Array.isArray(source.colors) && source.colors.length > 0) {
+        colors = source.colors;
+      } else if (Array.isArray(source.card_faces)) {
+        colors = [...new Set(source.card_faces.flatMap(face => face.colors || []))];
+      }
+      // fallback to color_identity if colors empty
+      if (colors.length === 0 && Array.isArray(source.color_identity) && source.color_identity.length > 0) {
+        colors = source.color_identity;
+      }
+      // Add "Colorless" if still empty and mana_cost includes {C} or it's a land with no mana cost
+      if (colors.length === 0) {
+        const manaCost = source.mana_cost || '';
+        const typeLine = source.type_line || '';
+        if (manaCost.includes('{C}') || (typeLine.includes('Land') && manaCost === '')) {
+          colors = ['Colorless'];
+        }
+      }
+
+      let type_line = '';
+      if (source?.type_line) {
+        type_line = source.type_line;
+      } else if (source?.card_faces?.length) {
+        type_line = source.card_faces.map(face => face.type_line).filter(Boolean).join(' // ');
+      }
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('username')
@@ -101,30 +141,45 @@ export default function CardDetail() {
         .single();
       const username = profile?.username || user.email;
 
-      const { error: insertError } = await supabase
-        .from('inventory')
-        .insert([{
-          name,
-          quantity,
-          image_url: frontImage,
-          back_image_url: backImage,
-          set_name,
-          scryfall_uri,
-          price,
-          scryfall_id,
-          user_id,
-          username,
-        }]);
-      if (insertError) throw insertError;
+      if (existingCard) {
+        // Update quantity
+        const newQty = existingCard.quantity + quantity;
+        const { error: updateError } = await supabase
+          .from('inventory')
+          .update({ quantity: newQty })
+          .eq('id', existingCard.id);
+        if (updateError) throw updateError;
+      } else {
+        // Insert new
+        const { error: insertError } = await supabase
+          .from('inventory')
+          .insert([{
+            name,
+            quantity,
+            image_url: frontImage,
+            back_image_url: backImage,
+            set_name,
+            scryfall_uri,
+            price,
+            scryfall_id,
+            user_id,
+            username,
+            colors,
+            type_line,
+          }]);
+        if (insertError) throw insertError;
+      }
+
       setMessage({ type: 'success', text: `${name} added to inventory!` });
       setQuantity(1);
     } catch (err) {
-      console.error('Insert error:', err);
+      console.error('Inventory error:', err);
       setMessage({ type: 'error', text: 'Failed to add to inventory' });
     } finally {
       setAdding(false);
     }
   };
+
 
   if (loading) {
     return <div className="text-center mt-20 text-gray-300">Loading card data...</div>;
@@ -174,7 +229,6 @@ export default function CardDetail() {
     status: st.charAt(0).toUpperCase() + st.slice(1),
   }));
 
-  // Check if it's a transform card layout
   const isTransformCard = (print?.layout || card.layout) === 'transform';
 
   return (

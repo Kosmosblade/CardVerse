@@ -10,79 +10,78 @@ import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import CardCountDisplay from '../components/CardCountDisplay';
 
+// Added Colorless with code 'C'
 const colorOptions = [
   { code: 'W', label: 'White' },
   { code: 'U', label: 'Blue' },
   { code: 'B', label: 'Black' },
   { code: 'R', label: 'Red' },
   { code: 'G', label: 'Green' },
+  { code: 'Colorless', label: 'Colorless' }, // Added Colorless
 ];
 
-const CardItem = memo(function CardItem({
-  card,
-  onClick,
-  onDelete,
-  onHover,
-  flipped,
-  onFlip,
-}) {
-  const frontImage = card.image_url || '/placeholder.jpg';
-  const backImage = card.back_image_url || null;
-  const displayedImage = flipped && backImage ? backImage : frontImage;
+const CardItem = memo(
+  function CardItem({ card, onClick, onDelete, onHover, flipped, onFlip }) {
+    const frontImage = card.image_url || '/placeholder.jpg';
+    const backImage = card.back_image_url || null;
+    const displayedImage = flipped && backImage ? backImage : frontImage;
 
-  return (
-    <div
-      className="relative group cursor-pointer rounded-xl overflow-hidden shadow-md bg-[#0a1528] w-[172px] h-[240px]"
-      onClick={() => onClick(card)}
-      onMouseEnter={() => onHover(card)}
-      onMouseLeave={() => onHover(null)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick(card);
-        }
-      }}
-      aria-label={`View details for ${card.name}`}
-    >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(card.id);
+    return (
+      <div
+        className="relative group cursor-pointer rounded-xl overflow-hidden shadow-md bg-[#0a1528] w-[172px] h-[240px]"
+        onClick={() => onClick(card)}
+        onMouseEnter={() => onHover(card)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(card);
+          }
         }}
-        className="absolute top-2 right-2 z-30 bg-red-700 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-        type="button"
+        aria-label={`View details for ${card.name}`}
       >
-        ❌
-      </button>
-      {backImage && (
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onFlip(card.id);
+            onDelete(card.id);
           }}
-          className="absolute top-2 left-2 z-20 bg-gray-800 bg-opacity-75 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-2 right-2 z-30 bg-red-700 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
           type="button"
         >
-          🔁
+          ❌
         </button>
-      )}
-      <img
-        src={displayedImage}
-        alt={card.name}
-        className="w-full h-full object-cover"
-        onError={(e) => {
-          e.target.onerror = null;
-          e.target.src = '/placeholder.jpg';
-        }}
-        draggable={false}
-      />
-    </div>
-  );
-},
-(prev, next) =>
-  prev.card.id === next.card.id && prev.flipped === next.flipped
+        {backImage && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onFlip(card.id);
+            }}
+            className="absolute top-2 left-2 z-20 bg-gray-800 bg-opacity-75 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            type="button"
+          >
+            🔁
+          </button>
+        )}
+        <img
+          src={displayedImage}
+          alt={card.name}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = '/placeholder.jpg';
+          }}
+          draggable={false}
+        />
+        {card.quantity > 1 && (
+          <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-md">
+            ×{card.quantity}
+          </div>
+        )}
+      </div>
+    );
+  },
+  (prev, next) => prev.card.id === next.card.id && prev.flipped === next.flipped
 );
 
 export default function Inventory() {
@@ -117,82 +116,214 @@ export default function Inventory() {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
   }, []);
 
-  // fetch inventory
+  // fetch inventory with filters applied server-side
   const fetchInventory = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
+
+    let query = supabase
       .from('inventory')
       .select(
-        'id, name, quantity, price, image_url, back_image_url, set_name, scryfall_uri, scryfall_id'
+        'id, name, quantity, price, image_url, back_image_url, set_name, scryfall_uri, scryfall_id, type_line, colors'
       )
-      .eq('user_id', user.id)
+      .eq('user_id', user.id);
+
+    // filters
+    if (fName.trim() !== '') {
+      query = query.ilike('name', `%${fName.trim()}%`);
+    }
+    if (fSet !== '') {
+      query = query.eq('set_name', fSet);
+    }
+    if (fMinQty !== '') {
+      const minQty = parseInt(fMinQty, 10);
+      if (!isNaN(minQty)) query = query.gte('quantity', minQty);
+    }
+    if (fMaxQty !== '') {
+      const maxQty = parseInt(fMaxQty, 10);
+      if (!isNaN(maxQty)) query = query.lte('quantity', maxQty);
+    }
+    if (fMinPrice !== '') {
+      const minPrice = parseFloat(fMinPrice);
+      if (!isNaN(minPrice)) query = query.gte('price', minPrice);
+    }
+    if (fMaxPrice !== '') {
+      const maxPrice = parseFloat(fMaxPrice);
+      if (!isNaN(maxPrice)) query = query.lte('price', maxPrice);
+    }
+    if (fColors.length > 0) {
+      // filter cards that contain ALL selected colors (codes like 'W', 'C', etc)
+      fColors.forEach((color) => {
+        query = query.contains('colors', [color]);
+      });
+    }
+
+    // Pagination and ordering
+    query = query
       .range((currentPage - 1) * pageSize, currentPage * pageSize - 1)
       .order('created_at', { ascending: false });
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error loading inventory:', error);
       setInventory([]);
-    } else {
-      setInventory(data || []);
-      if (!selectedCard && data.length) setSelectedCard(data[0]);
-      else if (
-        selectedCard &&
-        !data.find((c) => c.id === selectedCard.id)
-      ) {
-        setSelectedCard(null);
-      }
+      setSelectedCard(null);
+      setLoading(false);
+      return;
+    }
+
+    // client side filter for types (because supabase doesn't support OR for multiple values easily)
+    let filteredData = data || [];
+    if (fTypes.length > 0) {
+      filteredData = filteredData.filter((card) =>
+        fTypes.some((type) =>
+          card.type_line?.toLowerCase().includes(type.toLowerCase())
+        )
+      );
+    }
+
+    setInventory(filteredData);
+    if (!selectedCard && filteredData.length) setSelectedCard(filteredData[0]);
+    else if (selectedCard && !filteredData.find((c) => c.id === selectedCard.id)) {
+      setSelectedCard(null);
     }
     setLoading(false);
-  }, [user, currentPage, refreshTrigger, selectedCard]);
+  }, [
+    user,
+    currentPage,
+    refreshTrigger,
+    selectedCard,
+    fName,
+    fSet,
+    fMinQty,
+    fMaxQty,
+    fMinPrice,
+    fMaxPrice,
+    fColors,
+    fTypes,
+  ]);
 
   useEffect(() => {
     fetchInventory();
   }, [fetchInventory]);
 
-  // add card
-  const handleAdd = useCallback(
-    async (e) => {
-      e.preventDefault();
-      if (!cardName.trim() || !user) return;
-      const qty = parseInt(quantity, 10);
-      if (qty < 1) return alert('Quantity ≥ 1');
-      try {
-        const res = await fetch(
-          `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(
-            cardName.trim()
-          )}`
-        );
-        const r = await res.json();
-        if (r.object === 'error') return alert('Card not found');
-        const image_url =
-          r.image_uris?.normal ||
-          r.card_faces?.[0]?.image_uris?.normal ||
-          '';
-        const back_image_url = r.card_faces?.[1]?.image_uris?.normal || '';
-        await supabase.from('inventory').insert([
+ const handleAdd = useCallback(
+  async (e) => {
+    e.preventDefault();
+    if (!cardName.trim() || !user) return;
+    const qty = parseInt(quantity, 10);
+    if (qty < 1) return alert('Quantity ≥ 1');
+    try {
+      const res = await fetch(
+        `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(
+          cardName.trim()
+        )}`
+      );
+      const r = await res.json();
+      if (r.object === 'error') return alert('Card not found');
+
+      // Fix colors extraction — ensure it's always an array of strings or empty array
+      let cardColors = [];
+      if (Array.isArray(r.colors)) {
+        cardColors = r.colors;
+      } else if (r.card_faces && Array.isArray(r.card_faces)) {
+        // Combine colors from all faces (if multiface)
+        cardColors = r.card_faces.reduce((acc, face) => {
+          if (Array.isArray(face.colors)) acc.push(...face.colors);
+          return acc;
+        }, []);
+        // Remove duplicates
+        cardColors = [...new Set(cardColors)];
+      }
+
+      // Add "Colorless" if no colors and mana cost includes {C} or land with no mana cost
+      if (
+        cardColors.length === 0 &&
+        (r.mana_cost?.includes('{C}') || (r.type_line?.includes('Land') && !r.mana_cost))
+      ) {
+        cardColors = ['Colorless'];  // FULL word here, NOT 'C'
+      }
+
+      const image_url =
+        r.image_uris?.normal ||
+        r.card_faces?.[0]?.image_uris?.normal ||
+        '';
+      const back_image_url = r.card_faces?.[1]?.image_uris?.normal || '';
+
+      // Fetch username for logged in user
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+
+      const username = profile?.username || null;
+
+      // Check if card already exists for this user in inventory
+      const { data: existingCard, error: fetchError } = await supabase
+        .from('inventory')
+        .select('id, quantity')
+        .eq('user_id', user.id)
+        .eq('scryfall_id', r.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 = no rows found, so safe to proceed
+        console.error('Error checking existing card:', fetchError);
+        alert('Failed to add card');
+        return;
+      }
+
+      if (existingCard) {
+        // Card exists, update quantity by adding
+        const newQty = existingCard.quantity + qty;
+        const { error: updateError } = await supabase
+          .from('inventory')
+          .update({ quantity: newQty })
+          .eq('id', existingCard.id);
+
+        if (updateError) {
+          console.error('Error updating quantity:', updateError);
+          alert('Failed to update card quantity');
+          return;
+        }
+      } else {
+        // Card does not exist, insert new with username and colors
+        const { error: insertError } = await supabase.from('inventory').insert([
           {
             name: r.name,
             quantity: qty,
             user_id: user.id,
+            username,           // <-- Add username here
             price: parseFloat(r.prices?.usd) || 0,
             image_url,
             back_image_url,
             set_name: r.set_name,
             scryfall_uri: r.scryfall_uri,
             scryfall_id: r.id,
+            type_line: r.type_line || '',
+            colors: cardColors, // colorless fix applied here
           },
         ]);
-        setCardName('');
-        setQuantity(1);
-        setRefreshTrigger((p) => p + 1);
-      } catch (err) {
-        console.error(err);
-        alert('Failed to add card');
+
+        if (insertError) {
+          console.error('Error inserting new card:', insertError);
+          alert('Failed to add card');
+          return;
+        }
       }
-    },
-    [cardName, quantity, user]
-  );
+
+      setCardName('');
+      setQuantity(1);
+      setRefreshTrigger((p) => p + 1);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add card');
+    }
+  },
+  [cardName, quantity, user]
+);
 
   // delete card
   const handleDelete = useCallback(
@@ -257,25 +388,39 @@ export default function Inventory() {
     [inventory, flippedCards, handleClick, handleDelete, handleFlip, handleHover]
   );
 
-  // unique sets/types
+  // unique sets/types for filters
   const uniqueSets = useMemo(
     () => Array.from(new Set(inventory.map((c) => c.set_name))).sort(),
     [inventory]
   );
-  const uniqueTypes = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          inventory
-            .map((c) => c.type_line || '')
-            .join(';')
-            .split(/[,—–\\/]/)
-            .map((s) => s.trim())
-            .filter(Boolean)
-        )
-      ).sort(),
-    [inventory]
-  );
+
+  // Fix uniqueTypes extraction to clean up type strings:
+  const uniqueTypes = useMemo(() => {
+    // Extract all type_line strings from inventory
+    const allTypeLines = inventory
+      .map((c) => c.type_line || '')
+      .filter(Boolean);
+
+    // Split each type_line into individual types by common delimiters
+    let typeSet = new Set();
+
+    allTypeLines.forEach((line) => {
+      // Split on commas, em dash, en dash, hyphen, slash
+      const parts = line
+        .split(/[,—–\-\/]/)
+        .map((s) => s.trim().replace(/;+$/, '')) // trim and remove trailing semicolons
+        .filter(Boolean);
+
+      parts.forEach((part) => {
+        // Ignore very long or malformed parts like "Angel;;;;;;;;;;"
+        if (part.length > 0 && part.length < 30) {
+          typeSet.add(part);
+        }
+      });
+    });
+
+    return Array.from(typeSet).sort();
+  }, [inventory]);
 
   return (
     <div className="flex h-screen bg-[#0a1528] text-white overflow-hidden">
@@ -329,6 +474,7 @@ export default function Inventory() {
                 className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
                 placeholder="Black Lotus"
                 required
+                autoComplete="off"
               />
             </div>
             <div className="w-20">
@@ -391,6 +537,7 @@ export default function Inventory() {
           onClick={() => setShowFilters((v) => !v)}
           className="absolute left-[-32px] top-4 bg-[#1b2e4b] p-2 rounded-full shadow"
           aria-label="Toggle filters"
+          type="button"
         >
           {showFilters ? '◀' : '▶'}
         </button>
@@ -408,6 +555,7 @@ export default function Inventory() {
               }}
               className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600"
               placeholder="Black Lotus"
+              autoComplete="off"
             />
           </div>
           <div>
@@ -486,51 +634,61 @@ export default function Inventory() {
               />
             </div>
           </div>
+
+          {/* --- Color filter (multi-select) --- */}
           <div>
             <label className="block mb-1">Colors</label>
-            <div className="flex flex-wrap gap-2">
+            <select
+              multiple
+              value={fColors}
+              onChange={(e) => {
+                const selectedOptions = Array.from(e.target.selectedOptions).map(
+                  (opt) => opt.value
+                );
+                setFColors(selectedOptions);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-28"
+            >
               {colorOptions.map(({ code, label }) => (
-                <label key={code} className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={fColors.includes(code)}
-                    onChange={() => {
-                      setFColors((p) =>
-                        p.includes(code) ? p.filter((c) => c !== code) : [...p, code]
-                      );
-                      setCurrentPage(1);
-                    }}
-                    className="mr-1"
-                  />
+                <option key={code} value={code}>
                   {label}
-                </label>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
+
+          {/* --- Types filter changed to multi-select dropdown --- */}
           <div>
             <label className="block mb-1">Types</label>
-            <div className="max-h-32 overflow-auto p-2 border border-gray-600 bg-black rounded">
+            <select
+              multiple
+              value={fTypes}
+              onChange={(e) => {
+                const selectedOptions = Array.from(e.target.selectedOptions).map(
+                  (opt) => opt.value
+                );
+                setFTypes(selectedOptions);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-32"
+              size={6} // shows multiple rows without scrolling if possible
+            >
               {uniqueTypes.map((t) => (
-                <label key={t} className="block">
-                  <input
-                    type="checkbox"
-                    checked={fTypes.includes(t)}
-                    onChange={() => {
-                      setFTypes((p) =>
-                        p.includes(t) ? p.filter((x) => x !== t) : [...p, t]
-                      );
-                      setCurrentPage(1);
-                    }}
-                    className="mr-1"
-                  />
+                <option key={t} value={t}>
                   {t}
-                </label>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
+
           <button
-            onClick={resetAll}
+            onClick={(e) => {
+              e.preventDefault();
+              resetAll();
+            }}
             className="w-full bg-red-700 hover:bg-red-800 py-2 rounded text-center"
+            type="button"
           >
             Reset Filters
           </button>

@@ -3,10 +3,12 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Reordered links with Import Deck and My Decks both included, My Decks under Inventory
 const links = [
   { name: "Browse Cards", href: "/" },
-  { name: "My Decks", href: "/decks" },
+  { name: "Import Deck", href: "/decks" },  // your old mydeck renamed here
   { name: "Inventory", href: "/inventory" },
+  { name: "My Decks", href: "/mydecks" },          // new MyDecks page here, below Inventory
   { name: "AICommanderDeck", href: "/aicommanderdecks" },
   { name: "About", href: "/about" },
   { name: "Login", href: "/login" },
