@@ -239,17 +239,22 @@ export default function Inventory() {
 
       // Add "Colorless" if no colors and mana cost includes {C} or land with no mana cost
       if (
-        cardColors.length === 0 &&
-        (r.mana_cost?.includes('{C}') || (r.type_line?.includes('Land') && !r.mana_cost))
-      ) {
-        cardColors = ['Colorless'];  // FULL word here, NOT 'C'
-      }
+  cardColors.length === 0 &&
+  (
+    r.mana_cost?.includes('{C}') || 
+    (r.type_line?.includes('Land') && r.type_line?.includes('Artifact') && !r.mana_cost) ||
+    (r.type_line?.includes('Artifact') && (!r.mana_cost || r.mana_cost === '' || r.mana_cost === '{0}'))
+  )
+) {
+  cardColors = ['Colorless'];  // FULL word here, NOT 'C'
+}
 
-      const image_url =
-        r.image_uris?.normal ||
-        r.card_faces?.[0]?.image_uris?.normal ||
-        '';
-      const back_image_url = r.card_faces?.[1]?.image_uris?.normal || '';
+const image_url =
+  r.image_uris?.normal ||
+  r.card_faces?.[0]?.image_uris?.normal ||
+  '';
+
+const back_image_url = r.card_faces?.[1]?.image_uris?.normal || '';
 
       // Fetch username for logged in user
       const { data: profile, error: profileError } = await supabase
@@ -326,31 +331,81 @@ export default function Inventory() {
 );
 
   // delete card
-  const handleDelete = useCallback(
-    async (id) => {
-      await supabase.from('inventory').delete().eq('id', id);
-      setRefreshTrigger((p) => p + 1);
-    },
-    []
-  );
+  // Inside Inventory function component, add:
 
-  // card click / hover / flip
-  const handleClick = useCallback(
-    (card) =>
-      router.push(
-        card.scryfall_id
-          ? `/card/${card.scryfall_id}`
-          : `/card/${encodeURIComponent(card.name)}`
-      ),
-    [router]
-  );
-  const handleHover = useCallback((card) => {
-    setHoveredCard(card);
-    hoveredCardRef.current = card;
-  }, []);
-  const handleFlip = useCallback((id) => {
-    setFlippedCards((p) => ({ ...p, [id]: !p[id] }));
-  }, []);
+const handleClick = useCallback(
+  (card) => {
+    router.push(
+      card.scryfall_id
+        ? `/card/${card.scryfall_id}`
+        : `/card/${encodeURIComponent(card.name)}`
+    );
+  },
+  [router]
+);
+
+const handleDelete = useCallback(
+  async (id) => {
+    try {
+      const { data: card, error: fetchError } = await supabase
+        .from('inventory')
+        .select('quantity')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching card quantity:', fetchError);
+        alert('Failed to delete card');
+        return;
+      }
+
+      if (!card) {
+        alert('Card not found');
+        return;
+      }
+
+      if (card.quantity > 1) {
+        const { error: updateError } = await supabase
+          .from('inventory')
+          .update({ quantity: card.quantity - 1 })
+          .eq('id', id);
+
+        if (updateError) {
+          console.error('Error updating quantity:', updateError);
+          alert('Failed to update card quantity');
+          return;
+        }
+      } else {
+        const { error: deleteError } = await supabase
+          .from('inventory')
+          .delete()
+          .eq('id', id);
+
+        if (deleteError) {
+          console.error('Error deleting card:', deleteError);
+          alert('Failed to delete card');
+          return;
+        }
+      }
+
+      setRefreshTrigger((p) => p + 1);
+    } catch (err) {
+      console.error('Unexpected error deleting card:', err);
+      alert('Failed to delete card');
+    }
+  },
+  []
+);
+
+const handleHover = useCallback((card) => {
+  setHoveredCard(card);
+  hoveredCardRef.current = card;
+}, []);
+
+const handleFlip = useCallback((id) => {
+  setFlippedCards((p) => ({ ...p, [id]: !p[id] }));
+}, []);
+
 
   // pagination
   const handleNext = () => {
@@ -373,20 +428,20 @@ export default function Inventory() {
 
   // grid items
   const inventoryGrid = useMemo(
-    () =>
-      inventory.map((c) => (
-        <CardItem
-          key={c.id}
-          card={c}
-          onClick={handleClick}
-          onDelete={handleDelete}
-          flipped={flippedCards[c.id]}
-          onFlip={handleFlip}
-          onHover={handleHover}
-        />
-      )),
-    [inventory, flippedCards, handleClick, handleDelete, handleFlip, handleHover]
-  );
+  () =>
+    inventory.map((c) => (
+      <CardItem
+        key={c.id}
+        card={c}
+        onClick={handleClick}
+        onDelete={handleDelete}
+        flipped={flippedCards[c.id]}
+        onFlip={handleFlip}
+        onHover={handleHover}
+      />
+    )),
+  [inventory, flippedCards, handleClick, handleDelete, handleFlip, handleHover]
+);
 
   // unique sets/types for filters
   const uniqueSets = useMemo(
@@ -526,174 +581,174 @@ export default function Inventory() {
       </main>
 
       {/* RIGHT FILTER DRAWER (fixed) */}
-      <aside
-        className={`fixed top-0 right-0 h-full bg-[#1b2e4b] shadow-lg p-4 transition-transform duration-300 ${
-          showFilters ? 'translate-x-0' : 'translate-x-full'
-        }`}
-        style={{ width: '260px', zIndex: 50 }}
+<aside
+  className={`fixed top-0 right-0 h-full bg-[#1b2e4b] shadow-lg p-4 transition-transform duration-300 filterbar-container ${
+    showFilters ? 'translate-x-0' : 'translate-x-full'
+  }`}
+  style={{ width: '260px', zIndex: 50 }}
+>
+  {/* toggle handle */}
+  <button
+    onClick={() => setShowFilters((v) => !v)}
+    className="absolute left-[-32px] top-4 bg-[#1b2e4b] p-2 rounded-full shadow filterbar-toggle"
+    aria-label="Toggle filters"
+    type="button"
+  >
+    {showFilters ? '◀' : '▶'}
+  </button>
+
+  <h2 className="text-lg mb-4 text-cyan-300 filterbar-title">Filters</h2>
+  <div className="space-y-3 text-sm filterbar-content">
+    <div>
+      <label className="block mb-1">Name contains</label>
+      <input
+        type="text"
+        value={fName}
+        onChange={(e) => {
+          setFName(e.target.value);
+          setCurrentPage(1);
+        }}
+        className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
+        placeholder="Black Lotus"
+        autoComplete="off"
+      />
+    </div>
+    <div>
+      <label className="block mb-1">Set</label>
+      <select
+        value={fSet}
+        onChange={(e) => {
+          setFSet(e.target.value);
+          setCurrentPage(1);
+        }}
+        className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-select"
       >
-        {/* toggle handle */}
-        <button
-          onClick={() => setShowFilters((v) => !v)}
-          className="absolute left-[-32px] top-4 bg-[#1b2e4b] p-2 rounded-full shadow"
-          aria-label="Toggle filters"
-          type="button"
-        >
-          {showFilters ? '◀' : '▶'}
-        </button>
+        <option value="">All sets</option>
+        {uniqueSets.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
+    </div>
+    <div className="grid grid-cols-2 gap-2">
+      <div>
+        <label className="block mb-1">Qty ≥</label>
+        <input
+          type="number"
+          min="0"
+          value={fMinQty}
+          onChange={(e) => {
+            setFMinQty(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
+        />
+      </div>
+      <div>
+        <label className="block mb-1">Qty ≤</label>
+        <input
+          type="number"
+          min="0"
+          value={fMaxQty}
+          onChange={(e) => {
+            setFMaxQty(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
+        />
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-2">
+      <div>
+        <label className="block mb-1">Price ≥</label>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={fMinPrice}
+          onChange={(e) => {
+            setFMinPrice(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
+        />
+      </div>
+      <div>
+        <label className="block mb-1">Price ≤</label>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={fMaxPrice}
+          onChange={(e) => {
+            setFMaxPrice(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
+        />
+      </div>
+    </div>
 
-        <h2 className="text-lg mb-4 text-cyan-300">Filters</h2>
-        <div className="space-y-3 text-sm">
-          <div>
-            <label className="block mb-1">Name contains</label>
-            <input
-              type="text"
-              value={fName}
-              onChange={(e) => {
-                setFName(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600"
-              placeholder="Black Lotus"
-              autoComplete="off"
-            />
-          </div>
-          <div>
-            <label className="block mb-1">Set</label>
-            <select
-              value={fSet}
-              onChange={(e) => {
-                setFSet(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600"
-            >
-              <option value="">All sets</option>
-              {uniqueSets.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block mb-1">Qty ≥</label>
-              <input
-                type="number"
-                min="0"
-                value={fMinQty}
-                onChange={(e) => {
-                  setFMinQty(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600"
-              />
-            </div>
-            <div>
-              <label className="block mb-1">Qty ≤</label>
-              <input
-                type="number"
-                min="0"
-                value={fMaxQty}
-                onChange={(e) => {
-                  setFMaxQty(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block mb-1">Price ≥</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={fMinPrice}
-                onChange={(e) => {
-                  setFMinPrice(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600"
-              />
-            </div>
-            <div>
-              <label className="block mb-1">Price ≤</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={fMaxPrice}
-                onChange={(e) => {
-                  setFMaxPrice(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600"
-              />
-            </div>
-          </div>
+    {/* --- Color filter (multi-select) --- */}
+    <div>
+      <label className="block mb-1">Colors</label>
+      <select
+        multiple
+        value={fColors}
+        onChange={(e) => {
+          const selectedOptions = Array.from(e.target.selectedOptions).map(
+            (opt) => opt.value
+          );
+          setFColors(selectedOptions);
+          setCurrentPage(1);
+        }}
+        className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-28 filterbar-multiselect"
+      >
+        {colorOptions.map(({ code, label }) => (
+          <option key={code} value={code}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </div>
 
-          {/* --- Color filter (multi-select) --- */}
-          <div>
-            <label className="block mb-1">Colors</label>
-            <select
-              multiple
-              value={fColors}
-              onChange={(e) => {
-                const selectedOptions = Array.from(e.target.selectedOptions).map(
-                  (opt) => opt.value
-                );
-                setFColors(selectedOptions);
-                setCurrentPage(1);
-              }}
-              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-28"
-            >
-              {colorOptions.map(({ code, label }) => (
-                <option key={code} value={code}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
+    {/* --- Types filter changed to multi-select dropdown --- */}
+    <div>
+      <label className="block mb-1">Types</label>
+      <select
+        multiple
+        value={fTypes}
+        onChange={(e) => {
+          const selectedOptions = Array.from(e.target.selectedOptions).map(
+            (opt) => opt.value
+          );
+          setFTypes(selectedOptions);
+          setCurrentPage(1);
+        }}
+        className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-32"
+        size={6} // shows multiple rows without scrolling if possible
+      >
+        {uniqueTypes.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </select>
+    </div>
 
-          {/* --- Types filter changed to multi-select dropdown --- */}
-          <div>
-            <label className="block mb-1">Types</label>
-            <select
-              multiple
-              value={fTypes}
-              onChange={(e) => {
-                const selectedOptions = Array.from(e.target.selectedOptions).map(
-                  (opt) => opt.value
-                );
-                setFTypes(selectedOptions);
-                setCurrentPage(1);
-              }}
-              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-32"
-              size={6} // shows multiple rows without scrolling if possible
-            >
-              {uniqueTypes.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              resetAll();
-            }}
-            className="w-full bg-red-700 hover:bg-red-800 py-2 rounded text-center"
-            type="button"
-          >
-            Reset Filters
-          </button>
-        </div>
-      </aside>
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        resetAll();
+      }}
+      className="w-full bg-red-700 hover:bg-red-800 py-2 rounded text-center filterbar-reset-btn"
+      type="button"
+    >
+      Reset Filters
+    </button>
+  </div>
+</aside>
     </div>
   );
 }

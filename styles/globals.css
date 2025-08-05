@@ -2,114 +2,163 @@
 @tailwind components;
 @tailwind utilities;
 
-/* === BASE === */
+/* === BASE STYLES === */
 html,
 body {
   height: 100%;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  background-color: #0b1120;
-  color: white;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #0b1120; /* midnight */
+  color: #e6e6fa; /* soft lavender white */
+  font-family: 'Cinzel', serif, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-image: url('/assets/arcane-scroll-texture.png');
+  background-repeat: repeat;
+  background-size: 800px 800px;
+  background-position: center;
+  letter-spacing: 0.02em;
 }
 
-/* === CUSTOM COMPONENTS (for @apply with custom colors/classes) === */
-@layer components {
-  /* === GLOBAL UTILS === */
-  a {
-    color: #38bdf8; /* electric-blue */
-    transition-property: color;
-    transition-duration: 300ms;
-  }
-  a:hover {
-    color: #a78bfa; /* neon-purple */
-  }
+/* === TYPOGRAPHY MAGIC === */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #d4af37; /* eldritch-gold */
+  text-shadow: 0 0 8px #d4af37aa, 0 0 20px #6b21a8cc;
+}
 
-  /* === BUTTONS === */
-  .btn {
-    @apply py-2 px-4 font-semibold rounded-xl-2 transition duration-300 ease-in-out;
-    text-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
-  }
+p, span, label, a {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #cfcfea;
+  text-shadow: 0 0 4px rgba(107, 33, 168, 0.3);
+  line-height: 1.6;
+}
 
-  .btn-glow {
-    @apply bg-electric-blue hover:bg-neon-purple shadow-glow-blue text-white;
-  }
+/* === LINKS === */
+a {
+  color: #38bdf8; /* electric-blue */
+  transition: color 300ms ease;
+  text-decoration: underline dotted;
+}
+a:hover {
+  color: #a78bfa; /* neon-purple */
+  text-decoration-style: solid;
+  text-shadow: 0 0 8px #a78bfaaa;
+}
 
-  .btn-pink {
-    @apply bg-neon-pink hover:bg-glow-blue text-white;
-  }
+/* === BUTTONS === */
+.btn {
+  @apply py-3 px-6 font-semibold rounded-xl-2 uppercase tracking-widest text-white;
+  background-image: linear-gradient(45deg, #6b21a8, #a78bfa);
+  box-shadow: 0 0 15px #a78bfaaa;
+  transition: all 0.3s ease;
+  user-select: none;
+  text-shadow: 0 0 6px #6b21a8cc;
+}
+.btn:hover {
+  background-image: linear-gradient(45deg, #a78bfa, #6b21a8);
+  box-shadow: 0 0 24px #a78bfaee;
+  transform: scale(1.05) rotate(-1deg);
+}
 
-  /* === INPUTS & FORMS === */
-  input,
-  textarea {
-    @apply bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded-xl-2 w-full focus:outline-none focus:ring-2 focus:ring-electric-blue transition duration-300;
-  }
+/* === INPUTS & FORMS === */
+input,
+textarea,
+select {
+  @apply bg-[#1f1b2e] border border-[#6b21a8] text-white px-5 py-3 rounded-xl-2 shadow-inner;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  transition: all 0.3s ease;
+  outline-offset: 2px;
+}
+input::placeholder,
+textarea::placeholder {
+  color: rgba(167, 139, 250, 0.5);
+  font-style: italic;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 10px #a78bfacc;
+  background-color: #2f2a44;
+  outline: none;
+}
 
-  .input-glow {
-    @apply border border-glow-blue bg-gray-900 text-white px-4 py-2 rounded-xl-2 shadow-inner focus:ring-glow-blue;
-  }
+/* === TAGS & BUBBLES === */
+.bubble {
+  @apply text-xs font-bold px-4 py-1 rounded-full inline-block select-none;
+  background: linear-gradient(135deg, #000000cc, #a78bfacc);
+  color: white;
+  text-shadow: 0 0 4px #6b21a8cc;
+  letter-spacing: 0.05em;
+}
 
-  .input-dark {
-    @apply bg-[#0b1120] border border-gray-700 text-white px-4 py-2 rounded-xl-2;
-  }
+/* === CARD STYLE CONTAINERS === */
+.card-glow {
+  background-color: rgba(107, 33, 168, 0.15);
+  border: 1.5px solid rgba(167, 139, 250, 0.4);
+  box-shadow: 0 0 18px rgba(167, 139, 250, 0.6);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.card-glow:hover {
+  box-shadow: 0 0 30px rgba(230, 195, 93, 0.9);
+  transform: scale(1.05);
+}
 
-  input:focus-visible,
-  button:focus-visible,
-  textarea:focus-visible,
-  select:focus-visible {
-    outline: 2px solid #38bdf8;
-    outline-offset: 2px;
-  }
+.card-hype {
+  @apply p-6 rounded-xl-2 shadow-xl transition duration-300;
+  background: linear-gradient(135deg, rgba(230, 195, 93, 0.12), rgba(107, 33, 168, 0.15));
+  border: 1.5px solid rgba(230, 195, 93, 0.3);
+  box-shadow: 0 0 22px rgba(230, 195, 93, 0.4);
+}
 
-  /* === TAGS === */
-  .bubble {
-    @apply text-xs font-semibold px-3 py-1 rounded-full inline-block whitespace-nowrap select-none;
-    background-color: rgba(255, 255, 255, 0.15);
-    color: white;
-  }
-
-  /* === CARD STYLES === */
-  .card-glow {
-    background-color: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
-    border-radius: 1.25rem;
-    padding: 1rem;
-  }
-
-  .card-hype {
-    @apply p-4 rounded-xl-2 shadow-xl transition duration-300;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 0 20px rgba(255, 0, 200, 0.2);
-  }
-
-  .glass {
-    backdrop-filter: blur(12px);
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1.25rem;
-  }
+/* === GLASS EFFECT === */
+.glass {
+  backdrop-filter: blur(16px);
+  background: rgba(45, 15, 90, 0.55);
+  border: 1.5px solid rgba(230, 195, 93, 0.25);
+  border-radius: 1.5rem;
+  box-shadow: 0 0 10px rgba(230, 195, 93, 0.4);
 }
 
 /* === ANIMATIONS === */
 @keyframes pulse-glow {
   0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    box-shadow: 0 0 0 0 rgba(126, 95, 221, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 15px rgba(167, 139, 250, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 0 rgba(167, 139, 250, 0);
   }
 }
 
 .animate-pulse-glow {
-  animation: pulse-glow 2s infinite;
+  animation: pulse-glow 5s infinite;
+}
+
+@keyframes magic-wisp {
+  0%, 100% {
+    opacity: 0.8;
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(5px) translateY(-10px);
+  }
+}
+
+.animate-magic-wisp {
+  animation: magic-wisp 6s ease-in-out infinite;
 }
 
 /* === RESPONSIVE === */
@@ -121,7 +170,7 @@ body {
 
   @layer components {
     .btn {
-      @apply text-sm px-3 py-2;
+      @apply text-sm px-4 py-2;
     }
 
     input,
@@ -146,5 +195,5 @@ body {
 }
 .user-menu-btn::after {
   content: '';
-  @apply absolute inset-0 rounded-full border border-blue-500 blur-sm opacity-50 animate-pulse;
+  @apply absolute inset-0 rounded-full border border-[#a78bfa] blur-sm opacity-90 animate-pulse;
 }

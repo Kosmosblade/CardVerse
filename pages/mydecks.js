@@ -169,7 +169,14 @@ export default function MyDecks() {
 
   return (
     <div className="max-w-7xl mx-auto p-6 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 min-h-screen text-white rounded-lg shadow-lg">
-      <h1 className="text-5xl font-extrabold mb-12 text-center drop-shadow-lg">My Saved Decks</h1>
+      <div className="mb-12">
+  <img
+    src="/assets/conjured Decks.png"
+    alt="My Saved Decks"
+    className="w-full max-w-4xl mx-auto rounded-lg shadow-lg"
+  />
+</div>
+
 
       {loading && <div className="text-center text-indigo-300 font-semibold text-xl">Loading your decks...</div>}
 

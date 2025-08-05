@@ -317,7 +317,7 @@ export default function DeckBuilder() {
       setMessage("Parse and load a deck first.");
       return;
     }
-    // Check deck size on save also!
+
     const totalCardsCount = deckList.reduce((acc, c) => acc + c.count, 0);
     if (totalCardsCount > MAX_DECK_SIZE) {
       setMessage(
@@ -327,11 +327,13 @@ export default function DeckBuilder() {
     }
 
     const decklistJson = JSON.stringify(deckList);
+    const username = user.user_metadata?.user_name || user.email || "unknown";
 
     setLoading(true);
     const { data, error } = await supabase.from("decks").insert([
       {
         user_id: user.id,
+        username,
         title: deckTitle.trim(),
         commander_name: commanderName.trim(),
         color_identity: colorIdentity.trim(),

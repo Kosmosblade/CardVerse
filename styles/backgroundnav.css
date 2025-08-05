@@ -11,15 +11,54 @@
     background-position: 0% 50%;
   }
 }
+/* Add this to your backgroundnav.css or your global styles where nav links are */
+
+nav a {
+  color: #e6b002; /* match your golden highlight */
+  text-decoration: none;
+  position: relative;
+  transition: color 0.3s ease;
+  text-shadow:
+    0 0 4px rgba(230, 176, 2, 0.7),
+    0 0 10px rgba(230, 176, 2, 0.5),
+    0 0 20px rgba(10, 101, 107, 0.5);
+  /* subtle base glow */
+  animation: linkGlowPulse 3s infinite ease-in-out;
+}
+
+nav a:hover,
+nav a:focus {
+  color: #ffdb4d; /* lighter on hover */
+  text-shadow:
+    0 0 6px rgba(255, 219, 77, 0.9),
+    0 0 14px rgba(255, 219, 77, 0.7),
+    0 0 30px rgba(10, 101, 107, 0.8);
+  /* stronger glow on hover */
+  animation: linkGlowPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes linkGlowPulse {
+  0%, 100% {
+    text-shadow:
+      0 0 4px rgba(62, 3, 139, 0.758),
+      0 0 10px rgba(230, 2, 2, 0.856),
+      0 0 20px rgba(51, 195, 205, 0.5);
+  }
+  50% {
+    text-shadow:
+      0 0 8px rgba(0, 0, 0, 0.9),
+      0 0 16px rgba(215, 3, 49, 0.587),
+      0 0 28px rgba(10, 54, 107, 0.836);
+  }
+}
+
 
 nav {
-  background: linear-gradient(
-    270deg,
-    #7928ca,
-    #ff0080,
-    #7928ca,
-    #ff0080
-  );
-  background-size: 600% 600%;
-  animation: animatedGradient 20s ease infinite;
+  background: 
+    url('/assets/arcane-scroll-texture.png'),
+    linear-gradient(270deg, rgba(10, 101, 107, 0.203), rgba(230, 176, 2, 0.696));
+  background-size: cover, 600% 600%;
+  background-blend-mode: overlay;
+  animation: animatedGradient 2s ease infinite;
 }
+

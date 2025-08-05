@@ -3,12 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Reordered links with Import Deck and My Decks both included, My Decks under Inventory
 const links = [
   { name: "Browse Cards", href: "/" },
-  { name: "Import Deck", href: "/decks" },  // your old mydeck renamed here
+  { name: "Import Deck", href: "/decks" },
   { name: "Inventory", href: "/inventory" },
-  { name: "My Decks", href: "/mydecks" },          // new MyDecks page here, below Inventory
+  { name: "My Decks", href: "/mydecks" },
   { name: "AICommanderDeck", href: "/aicommanderdecks" },
   { name: "About", href: "/about" },
   { name: "Login", href: "/login" },
@@ -67,49 +66,64 @@ export default function NavBar() {
         {menuOpen && (
           <motion.nav
             ref={navRef}
-            className="fixed top-0 left-0 h-full w-72 backdrop-blur-lg bg-white/10 shadow-xl z-40 border-r border-indigo-600"
+            className="fixed top-0 left-0 h-full w-72 z-40 border-r border-indigo-600"
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
-            <div className="w-full h-24 mb-8 flex items-center justify-center p-2">
-              <Link href="/">
-                <img
-                  src="/assets/logoC.png"
-                  alt="Conjurers Crypt Logo"
-                  className="h-full w-auto object-contain select-none drop-shadow-md"
-                  draggable={false}
-                  onClick={() => setMenuOpen(false)}
-                />
-              </Link>
+            {/* ✅ Fixed background image path */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="/assets/arcane-scroll-texture.png"
+                alt="Nav background"
+                className="w-full h-full object-cover opacity-90"
+                draggable={false}
+              />
             </div>
 
-            <ul className="flex flex-col space-y-4 px-6">
-              {links.map(({ name, href }, i) => {
-                const isActive = router.pathname === href;
-                return (
-                  <motion.li
-                    key={href}
-                    custom={i}
-                    variants={linkVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                  >
-                    <Link
-                      href={href}
-                      className={`inline-block text-lg font-semibold transition-colors duration-200 w-fit rounded-md py-1 px-1 leading-none ${
-                        isActive ? "text-indigo-400" : "text-gray-300 hover:text-indigo-400"
-                      }`}
-                      onClick={() => setMenuOpen(false)}
+            {/* Foreground content */}
+            <div className="relative z-10 h-full w-full backdrop-blur-lg bg-white/10 shadow-xl">
+              <div className="w-full h-24 mb-8 flex items-center justify-center p-2">
+                <Link href="/">
+                  <img
+                    src="/assets/logoC.png"
+                    alt="Conjurers Crypt Logo"
+                    className="h-full w-auto object-contain select-none drop-shadow-md"
+                    draggable={false}
+                    onClick={() => setMenuOpen(false)}
+                  />
+                </Link>
+              </div>
+
+              <ul className="flex flex-col space-y-4 px-6">
+                {links.map(({ name, href }, i) => {
+                  const isActive = router.pathname === href;
+                  return (
+                    <motion.li
+                      key={href}
+                      custom={i}
+                      variants={linkVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
                     >
-                      {name}
-                    </Link>
-                  </motion.li>
-                );
-              })}
-            </ul>
+                      <Link
+                        href={href}
+                        className={`inline-block text-lg font-semibold transition-colors duration-200 w-fit rounded-md py-1 px-1 leading-none ${
+                          isActive
+                            ? "text-indigo-400"
+                            : "text-gray-300 hover:text-indigo-400"
+                        }`}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        {name}
+                      </Link>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            </div>
           </motion.nav>
         )}
       </AnimatePresence>

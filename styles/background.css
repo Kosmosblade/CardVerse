@@ -1,8 +1,10 @@
+/* styles/background.css */
 .background-overlay {
   position: fixed;
   inset: 0;
-  background: linear-gradient(45deg, #123456, #654321);
-  opacity: 0.3;
+  background: url('/assets/arcane-scroll-texture.png') repeat center center;
+  background-size: cover;
+  opacity: 0.1; /* subtle */
   pointer-events: none;
-  z-index: -1;
+  z-index: -10;
 }

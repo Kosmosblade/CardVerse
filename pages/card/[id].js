@@ -81,51 +81,62 @@ export default function CardDetail() {
       const scryfall_id = print?.id || card.id;
       const user_id = user.id;
 
-      // Check if card already exists for this user
-      const { data: existingCard, error: fetchError } = await supabase
-        .from('inventory')
-        .select('id, quantity')
-        .eq('scryfall_id', scryfall_id)
-        .eq('user_id', user_id)
-        .single();
+    // Check if card already exists for this user
+const { data: existingCard, error: fetchError } = await supabase
+  .from('inventory')
+  .select('id, quantity')
+  .eq('scryfall_id', scryfall_id)
+  .eq('user_id', user_id)
+  .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw fetchError;
-      }
+if (fetchError && fetchError.code !== 'PGRST116') {
+  throw fetchError;
+}
 
-      const frontImage =
-        print?.image_uris?.normal ||
-        print?.card_faces?.[0]?.image_uris?.normal ||
-        card.image_uris?.normal ||
-        card.card_faces?.[0]?.image_uris?.normal;
-      const backImage =
-        print?.card_faces?.[1]?.image_uris?.normal ||
-        card.card_faces?.[1]?.image_uris?.normal ||
-        null;
-      const set_name = print?.set_name || card.set_name;
-      const scryfall_uri = print?.scryfall_uri || card.scryfall_uri;
-      const rawPrice = print?.prices?.usd || card.prices?.usd;
-      const price = rawPrice ? parseFloat(rawPrice) : 0;
+const frontImage =
+  print?.image_uris?.normal ||
+  print?.card_faces?.[0]?.image_uris?.normal ||
+  card.image_uris?.normal ||
+  card.card_faces?.[0]?.image_uris?.normal;
 
-      let colors = [];
-      const source = print || card;
-      if (Array.isArray(source.colors) && source.colors.length > 0) {
-        colors = source.colors;
-      } else if (Array.isArray(source.card_faces)) {
-        colors = [...new Set(source.card_faces.flatMap(face => face.colors || []))];
-      }
-      // fallback to color_identity if colors empty
-      if (colors.length === 0 && Array.isArray(source.color_identity) && source.color_identity.length > 0) {
-        colors = source.color_identity;
-      }
-      // Add "Colorless" if still empty and mana_cost includes {C} or it's a land with no mana cost
-      if (colors.length === 0) {
-        const manaCost = source.mana_cost || '';
-        const typeLine = source.type_line || '';
-        if (manaCost.includes('{C}') || (typeLine.includes('Land') && manaCost === '')) {
-          colors = ['Colorless'];
-        }
-      }
+const backImage =
+  print?.card_faces?.[1]?.image_uris?.normal ||
+  card.card_faces?.[1]?.image_uris?.normal ||
+  null;
+
+const set_name = print?.set_name || card.set_name;
+const scryfall_uri = print?.scryfall_uri || card.scryfall_uri;
+const rawPrice = print?.prices?.usd || card.prices?.usd;
+const price = rawPrice ? parseFloat(rawPrice) : 0;
+
+let colors = [];
+const source = print || card;
+
+if (Array.isArray(source.colors) && source.colors.length > 0) {
+  colors = source.colors;
+} else if (Array.isArray(source.card_faces)) {
+  colors = [...new Set(source.card_faces.flatMap(face => face.colors || []))];
+}
+
+// fallback to color_identity if colors empty
+if (colors.length === 0 && Array.isArray(source.color_identity) && source.color_identity.length > 0) {
+  colors = source.color_identity;
+}
+
+// Add "Colorless" if still empty and meets these conditions:
+if (colors.length === 0) {
+  const manaCost = source.mana_cost || '';
+  const typeLine = source.type_line || '';
+
+  if (
+    manaCost.includes('{C}') ||  // explicit colorless mana cost
+    (typeLine.includes('Land') && manaCost === '') ||  // land with no mana cost
+    (typeLine.includes('Artifact') && (manaCost === '' || manaCost === '{0}' || !manaCost))  // 0 mana cost artifact
+  ) {
+    colors = ['Colorless'];
+  }
+}
+
 
       let type_line = '';
       if (source?.type_line) {
