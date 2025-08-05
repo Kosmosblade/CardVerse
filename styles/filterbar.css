@@ -1,0 +1,81 @@
+/* filterbar.css */
+
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.filterbar-container {
+  background: linear-gradient(270deg, #2e1a47, #0d9488, #2e1a47, #0d9488);
+  background-size: 400% 400%;
+  animation: gradientFlow 10s ease infinite;
+
+  box-shadow: 0 0 12px #0ccac4aa;
+  border-left: 2px solid #0ccac4c9;
+  backdrop-filter: saturate(180%) blur(12px);
+  color: #d0f0f8;
+  border-radius: 0 0 0 12px;
+  transition: transform 0.3s ease;
+}
+
+.filterbar-toggle {
+  background: linear-gradient(135deg, #0ccac4cc, #06999bcc);
+  box-shadow: 0 0 8px #0ccac4ff;
+  color: #0ccac4;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.filterbar-toggle:hover {
+  background: linear-gradient(135deg, #13e7e7, #0ef4f4);
+  color: #004d4d;
+  box-shadow: 0 0 14px #13e7e7ff;
+}
+
+.filterbar-title {
+  text-shadow:
+    0 0 6px #0ccac4,
+    0 0 10px #0ccac4bb;
+}
+
+.filterbar-input,
+.filterbar-select,
+.filterbar-multiselect {
+  background: #0a1624;
+  border: 1.5px solid #0ccac477;
+  border-radius: 6px;
+  color: #cceeee;
+  box-shadow: inset 0 0 6px #0ccac477;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.filterbar-input::placeholder {
+  color: #0ccac466;
+  font-style: italic;
+}
+
+.filterbar-input:focus,
+.filterbar-select:focus,
+.filterbar-multiselect:focus {
+  border-color: #0ff;
+  box-shadow:
+    0 0 12px #0ccac4ff,
+    inset 0 0 10px #0ccac4ff;
+  outline-color: #0ccac4ff;
+}
+
+.filterbar-reset-btn {
+  box-shadow: 0 0 6px #b92c2caa;
+  text-shadow: 0 0 3px #7f0000;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.filterbar-reset-btn:hover {
+  box-shadow: 0 0 12px #e04242cc;
+}

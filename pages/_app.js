@@ -1,5 +1,9 @@
 // pages/_app.js
+import '../styles/filterbar.css';
 import '../styles/globals.css';
+import '../styles/backgroundnav.css';
+import '../styles/background.css';
+import '../styles/usermenu.css';
 import NavBar from '../components/NavBar';
 import SearchBar from '../components/SearchBar';
 import Card from '../components/Card';
@@ -14,27 +18,23 @@ export default function MyApp({ Component, pageProps }) {
   const [query, setQuery] = useState('');
   const [cards, setCards] = useState([]);
   const router = useRouter();
-
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef();
 
-  // Load Supabase session
   useEffect(() => {
     async function loadSession() {
       const { data } = await supabase.auth.getSession();
       setUser(data?.session?.user ?? null);
     }
     loadSession();
-
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Fetch user profile
   useEffect(() => {
     if (!user) {
       setProfile(null);
@@ -53,7 +53,6 @@ export default function MyApp({ Component, pageProps }) {
     fetchProfile();
   }, [user]);
 
-  // Close menu on outside click
   useEffect(() => {
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -65,7 +64,6 @@ export default function MyApp({ Component, pageProps }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
-  // Discord webhook helper
   const sendDiscordWebhook = async (card) => {
     const payload = {
       username: 'Conjuerers Crypt Bot',
@@ -102,7 +100,6 @@ export default function MyApp({ Component, pageProps }) {
     }
   };
 
-  // Card search handler
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -128,12 +125,12 @@ export default function MyApp({ Component, pageProps }) {
   return (
     <AuthProvider>
       <CardCountProvider user={user}>
-        <div className="min-h-screen flex flex-col bg-[#0b1f3a] text-white relative overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-transparent text-white relative overflow-hidden">
+          <div className="background-overlay" />
           <div
             className="absolute inset-0 bg-animated-gradient bg-size-400 animate-gradient-move"
-            style={{ filter: 'blur(80px)', opacity: 0.5, zIndex: -2 }}
+            style={{ filter: 'blur(80px)', opacity: 0.5, zIndex: -1 }}
           />
-          <div className="background-overlay" />
 
           <NavBar />
 
@@ -147,29 +144,15 @@ export default function MyApp({ Component, pageProps }) {
             />
           )}
 
+          {/* Search bar and results ONLY on homepage */}
           {router.pathname === '/' && (
-            <SearchBar query={query} setQuery={setQuery} handleSearch={handleSearch} />
-          )}
-
-          {router.pathname === '/' && cards.length > 0 && (
-            <div className="max-w-6xl mx-auto px-6 mt-6 mb-12 w-full">
-              <AnimatePresence>
-                <motion.div
-                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  {cards.map((card) => (
-                    <Card key={card.id} card={card} />
-                  ))}
-                </motion.div>
-              </AnimatePresence>
+            <div className="w-full pt-32 px-4 flex justify-center">
+              {/* Pass cards array to SearchBar so it can render results */}
+              <SearchBar query={query} setQuery={setQuery} handleSearch={handleSearch} cards={cards} />
             </div>
           )}
 
-          <main className="flex-grow flex justify-center items-center p-6 max-w-6xl mx-auto mt-12">
+          <main className="flex-grow flex justify-center items-center p-6 max-w-6xl mx-auto mt-12 bg-transparent">
             <Component {...pageProps} query={query} />
           </main>
 
@@ -181,7 +164,7 @@ export default function MyApp({ Component, pageProps }) {
               </a>
               . Unaffiliated with Wizards of the Coast LLC.
             </p>
-            &copy; {new Date().getFullYear()} Conjuerers Crypt. All rights reserved.
+            &copy; {new Date().getFullYear()} Conjurers Crypt. All rights reserved.
           </footer>
         </div>
       </CardCountProvider>
@@ -190,13 +173,12 @@ export default function MyApp({ Component, pageProps }) {
 }
 
 // ====================================================================
-//  UserMenu: uses .user-menu-btn for glow border via your globals.css
+// UserMenu component (unchanged, just moved here for brevity)
 // ====================================================================
 function UserMenu({ profile, user, menuOpen, setMenuOpen, menuRef }) {
   const { cardCount } = useCardCount();
   const timeoutRef = useRef();
 
-  // auto-close after 15s
   useEffect(() => {
     if (menuOpen) timeoutRef.current = setTimeout(() => setMenuOpen(false), 15000);
     return () => clearTimeout(timeoutRef.current);
@@ -207,16 +189,33 @@ function UserMenu({ profile, user, menuOpen, setMenuOpen, menuRef }) {
       {!menuOpen && (
         <button
           onClick={() => setMenuOpen(true)}
-          className="user-menu-btn w-10 h-10 rounded-full overflow-hidden border-2 border-blue-600 shadow-md hover:shadow-blue-500 transition-all duration-300"
+          className="user-menu-btn relative w-12 h-12 rounded-full overflow-visible border-4 border-gradient-fire shadow-fire-glow hover:shadow-fire-glow-strong transition-all duration-500"
           title="User menu"
+          aria-label="Open user menu"
         >
           {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+            <img
+              src={profile.avatar_url}
+              alt="Avatar"
+              className="w-full h-full object-cover rounded-full relative z-10"
+            />
           ) : (
-            <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white font-bold">
+            <div className="w-full h-full bg-gradient-to-tr from-red-600 via-yellow-400 to-orange-600 flex items-center justify-center text-white font-extrabold text-lg rounded-full animate-pulse-fire relative z-10">
               {profile?.username?.charAt(0).toUpperCase() || 'U'}
             </div>
           )}
+          <span
+            className="flame-anim-layer pointer-events-none absolute rounded-full"
+            style={{
+              top: '-6px',
+              left: '-6px',
+              right: '-6px',
+              bottom: '-6px',
+              zIndex: 5,
+              opacity: 0.6,
+              filter: 'blur(6px)',
+            }}
+          />
         </button>
       )}
 
@@ -228,33 +227,43 @@ function UserMenu({ profile, user, menuOpen, setMenuOpen, menuRef }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.25 }}
-            className="mt-2 w-72 bg-[#0e2748]/90 backdrop-blur-md rounded-xl shadow-xl border border-blue-700 text-white font-sans overflow-hidden"
+            className="mt-2 w-64 bg-gradient-to-br from-[#3a0f0f] via-[#591212] to-[#7a1b1b] backdrop-blur-xl rounded-2xl shadow-2xl border border-gradient-fire-light text-white font-sans overflow-hidden relative"
           >
-            <div className="flex items-center gap-3 p-4 border-b border-blue-700">
-              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-blue-500">
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none flame-anim-layer rounded-2xl" />
+            <div className="flex items-center gap-4 p-6 border-b border-gradient-fire-light relative z-10">
+              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gradient-fire">
                 {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  <img
+                    src={profile.avatar_url}
+                    alt="Avatar"
+                    className="w-full h-full object-cover rounded-full"
+                  />
                 ) : (
-                  <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                  <div className="w-full h-full bg-gradient-to-tr from-red-600 via-yellow-400 to-orange-600 flex items-center justify-center text-white font-extrabold text-xl rounded-full animate-pulse-fire">
                     {profile?.username?.charAt(0).toUpperCase() || 'U'}
                   </div>
                 )}
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold truncate">{profile?.username || user?.email}</span>
-                <span className="text-xs text-blue-300">Online</span>
+                <span className="font-bold text-xl tracking-wide drop-shadow-lg select-text">
+                  {profile?.username || user?.email}
+                </span>
+                <span className="text-sm text-orange-300 tracking-wide select-text">Online</span>
               </div>
             </div>
 
-            <div className="px-4 py-3 space-y-2 text-sm">
-              <p>
-                <strong className="text-blue-400">Subscription:</strong>{' '}
-                {profile?.subscription_type
-                  ? profile.subscription_type[0].toUpperCase() + profile.subscription_type.slice(1)
-                  : 'Free'}
+            <div className="px-6 py-5 space-y-4 text-white relative z-10">
+              <p className="text-lg">
+                <strong className="text-orange-400">Subscription:</strong>{' '}
+                <span className="text-yellow-300 font-semibold">
+                  {profile?.subscription_type
+                    ? profile.subscription_type[0].toUpperCase() + profile.subscription_type.slice(1)
+                    : 'Free'}
+                </span>
               </p>
-              <p>
-                <strong className="text-blue-400">Cards in Inventory:</strong> {cardCount}
+              <p className="text-lg">
+                <strong className="text-orange-400">Cards in Inventory:</strong>{' '}
+                <span className="text-yellow-300 font-semibold">{cardCount}</span>
               </p>
               <button
                 onClick={() => {
@@ -262,10 +271,10 @@ function UserMenu({ profile, user, menuOpen, setMenuOpen, menuRef }) {
                   setMenuOpen(false);
                   supabase.auth.signOut().then(() => (window.location.href = '/'));
                 }}
-                className="relative w-full py-2 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium transition-all duration-300 shadow-md border border-rose-800"
+                className="relative w-full py-3 px-6 bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400 hover:from-yellow-400 hover:via-orange-500 hover:to-red-600 rounded-xl text-black font-bold text-lg shadow-lg shadow-yellow-600/70 transition-all duration-300"
               >
                 <span className="relative z-10">Log Out</span>
-                <span className="absolute inset-0 rounded-md opacity-30 blur-md bg-gradient-to-r from-rose-500 to-rose-700 animate-pulse z-0" />
+                <span className="absolute inset-0 rounded-xl opacity-60 blur-md bg-gradient-to-r from-yellow-400 via-orange-500 to-red-600 animate-pulse-fire-glow z-0" />
               </button>
             </div>
           </motion.div>
