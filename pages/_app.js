@@ -1,12 +1,11 @@
-// pages/_app.js
 import '../styles/filterbar.css';
 import '../styles/globals.css';
 import '../styles/backgroundnav.css';
 import '../styles/background.css';
 import '../styles/usermenu.css';
+
 import NavBar from '../components/NavBar';
 import SearchBar from '../components/SearchBar';
-import Card from '../components/Card';
 import { AuthProvider } from '../context/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
@@ -23,16 +22,36 @@ export default function MyApp({ Component, pageProps }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef();
 
+  const clearSearch = () => {
+    setQuery('');
+    setCards([]);
+  };
+
+  useEffect(() => {
+    if (router.isReady && router.query.reset === '1') {
+      clearSearch();
+      router.replace('/', undefined, { shallow: true });
+    }
+  }, [router.isReady, router.query.reset]);
+
   useEffect(() => {
     async function loadSession() {
       const { data } = await supabase.auth.getSession();
       setUser(data?.session?.user ?? null);
     }
     loadSession();
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
-    return () => listener.subscription.unsubscribe();
+
+    return () => {
+      try {
+        listener?.subscription?.unsubscribe?.();
+      } catch (e) {
+        // ignore
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -41,14 +60,19 @@ export default function MyApp({ Component, pageProps }) {
       return;
     }
     async function fetchProfile() {
-      const cleanUserId = user.id.replace(/[<>]/g, '');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('username, avatar_url, subscription_type, current_card_count')
-        .eq('id', cleanUserId)
-        .single();
-      if (!error && data) setProfile(data);
-      else setProfile(null);
+      try {
+        const cleanUserId = user.id.replace(/[<>]/g, '');
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username, avatar_url, subscription_type, current_card_count')
+          .eq('id', cleanUserId)
+          .single();
+        if (!error && data) setProfile(data);
+        else setProfile(null);
+      } catch (err) {
+        console.error('fetchProfile error', err);
+        setProfile(null);
+      }
     }
     fetchProfile();
   }, [user]);
@@ -64,57 +88,109 @@ export default function MyApp({ Component, pageProps }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
-  const sendDiscordWebhook = async (card) => {
+  const sendDiscordWebhook = async (card, opts = { usePrivate: false }) => {
+    if (!card) {
+      console.warn('[Webhook] sendDiscordWebhook called without card');
+      return false;
+    }
+
+    const origin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_SITE_URL || '';
+    const pageUrl = typeof window !== 'undefined' ? window.location.href : `${origin}${router.asPath}`;
+
+    const cardDetailUrl = `${origin}/card/${card.id}`;
+
     const payload = {
       username: 'Conjuerers Crypt Bot',
       embeds: [
         {
           title: `Card Searched: ${card.name}`,
-          url: card.scryfall_uri,
+          url: cardDetailUrl,
           description: card.oracle_text || 'No description',
           color: 7506394,
           fields: [
             { name: 'Set', value: card.set_name || 'N/A', inline: true },
             { name: 'Rarity', value: card.rarity || 'N/A', inline: true },
             { name: 'Price (USD)', value: card.prices?.usd || 'N/A', inline: true },
+            { name: 'Searched From', value: router.pathname || 'unknown', inline: true },
+            { name: 'Page URL', value: pageUrl || 'unknown', inline: false },
           ],
-          thumbnail: { url: card.image_uris?.small || '' },
+          thumbnail: {
+            url:
+              (card.image_uris && card.image_uris.small) ||
+              (card.card_faces?.[0]?.image_uris?.small) ||
+              '',
+          },
+          footer: { text: `Source: ${router.pathname || 'unknown'}` },
           timestamp: new Date().toISOString(),
         },
       ],
     };
+
+    const bodyToPost = { ...payload, usePrivate: !!opts.usePrivate };
+
     try {
       const res = await fetch('/api/send-to-discord', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(bodyToPost),
       });
+
+      let text;
+      try {
+        text = await res.text();
+      } catch (readErr) {
+        text = `<unable to read response text: ${readErr.message}>`;
+      }
+
       if (!res.ok) {
-        const errText = await res.text();
-        console.error('[Webhook Error]', { status: res.status, statusText: res.statusText, errText, payload });
+        console.error('[Webhook Error]', {
+          status: res.status,
+          statusText: res.statusText,
+          body: text,
+          payload: bodyToPost,
+        });
+        return false;
       } else {
-        console.log('[Webhook Success]', await res.json());
+        try {
+          const parsed = JSON.parse(text || '{}');
+          console.log('[Webhook Success]', parsed);
+        } catch {
+          console.log('[Webhook Success]', text || '(no body)');
+        }
+        return true;
       }
     } catch (err) {
       console.error('[Webhook Exception]', err);
+      return false;
     }
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
+
     try {
       const res = await fetch(
         `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(query.trim())}`
       );
       const data = await res.json();
+
       if (data.object === 'error') {
         alert('Card not found');
         setCards([]);
         return;
       }
+
       setCards([data]);
-      await sendDiscordWebhook(data);
+
+      const ok = await sendDiscordWebhook(data, { usePrivate: false });
+      if (!ok) {
+        console.warn('[handleSearch] webhook POST did not succeed (check server logs / debug panel)');
+      }
+
       if (router.pathname !== '/') router.push('/');
     } catch (err) {
       alert('Error fetching card data');
@@ -125,14 +201,14 @@ export default function MyApp({ Component, pageProps }) {
   return (
     <AuthProvider>
       <CardCountProvider user={user}>
-        <div className="min-h-screen flex flex-col bg-transparent text-white relative overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-transparent text-white relative">
           <div className="background-overlay" />
           <div
             className="absolute inset-0 bg-animated-gradient bg-size-400 animate-gradient-move"
             style={{ filter: 'blur(80px)', opacity: 0.5, zIndex: -1 }}
           />
 
-          <NavBar />
+          <NavBar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
           {user && (
             <UserMenu
@@ -147,12 +223,16 @@ export default function MyApp({ Component, pageProps }) {
           {/* Search bar and results ONLY on homepage */}
           {router.pathname === '/' && (
             <div className="w-full pt-32 px-4 flex justify-center">
-              {/* Pass cards array to SearchBar so it can render results */}
-              <SearchBar query={query} setQuery={setQuery} handleSearch={handleSearch} cards={cards} />
+              <SearchBar
+                query={query}
+                setQuery={setQuery}
+                handleSearch={handleSearch}
+                cards={cards}
+              />
             </div>
           )}
 
-          <main className="flex-grow flex justify-center items-center p-6 max-w-6xl mx-auto mt-12 bg-transparent">
+          <main className="flex-grow flex justify-center items-start p-6 max-w-6xl mx-auto mt-12 bg-transparent">
             <Component {...pageProps} query={query} />
           </main>
 
@@ -173,11 +253,39 @@ export default function MyApp({ Component, pageProps }) {
 }
 
 // ====================================================================
-// UserMenu component (unchanged, just moved here for brevity)
+// UserMenu component - fetches and displays deck count and profile info
 // ====================================================================
 function UserMenu({ profile, user, menuOpen, setMenuOpen, menuRef }) {
   const { cardCount } = useCardCount();
+  const [deckCount, setDeckCount] = useState(0);
   const timeoutRef = useRef();
+
+  useEffect(() => {
+    if (!user) {
+      setDeckCount(0);
+      return;
+    }
+    async function fetchDeckCount() {
+      try {
+        const cleanUserId = user.id.replace(/[<>]/g, '');
+        const { count, error } = await supabase
+          .from('decks')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', cleanUserId);
+
+        if (error) {
+          console.error('fetchDeckCount error:', error);
+          setDeckCount(0);
+        } else {
+          setDeckCount(count || 0);
+        }
+      } catch (err) {
+        console.error('fetchDeckCount exception:', err);
+        setDeckCount(0);
+      }
+    }
+    fetchDeckCount();
+  }, [user]);
 
   useEffect(() => {
     if (menuOpen) timeoutRef.current = setTimeout(() => setMenuOpen(false), 15000);
@@ -192,13 +300,16 @@ function UserMenu({ profile, user, menuOpen, setMenuOpen, menuRef }) {
           className="user-menu-btn relative w-12 h-12 rounded-full overflow-visible border-4 border-gradient-fire shadow-fire-glow hover:shadow-fire-glow-strong transition-all duration-500"
           title="User menu"
           aria-label="Open user menu"
+          type="button"
         >
           {profile?.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt="Avatar"
-              className="w-full h-full object-cover rounded-full relative z-10"
-            />
+            <a href="/profile" tabIndex={-1} aria-label="Go to profile">
+              <img
+                src={profile.avatar_url}
+                alt="Avatar"
+                className="w-full h-full object-cover rounded-full relative z-10 cursor-pointer"
+              />
+            </a>
           ) : (
             <div className="w-full h-full bg-gradient-to-tr from-red-600 via-yellow-400 to-orange-600 flex items-center justify-center text-white font-extrabold text-lg rounded-full animate-pulse-fire relative z-10">
               {profile?.username?.charAt(0).toUpperCase() || 'U'}
@@ -233,11 +344,13 @@ function UserMenu({ profile, user, menuOpen, setMenuOpen, menuRef }) {
             <div className="flex items-center gap-4 p-6 border-b border-gradient-fire-light relative z-10">
               <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gradient-fire">
                 {profile?.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    alt="Avatar"
-                    className="w-full h-full object-cover rounded-full"
-                  />
+                  <a href="/profile" tabIndex={-1} aria-label="Go to profile">
+                    <img
+                      src={profile.avatar_url}
+                      alt="Avatar"
+                      className="w-full h-full object-cover rounded-full cursor-pointer"
+                    />
+                  </a>
                 ) : (
                   <div className="w-full h-full bg-gradient-to-tr from-red-600 via-yellow-400 to-orange-600 flex items-center justify-center text-white font-extrabold text-xl rounded-full animate-pulse-fire">
                     {profile?.username?.charAt(0).toUpperCase() || 'U'}
@@ -265,7 +378,12 @@ function UserMenu({ profile, user, menuOpen, setMenuOpen, menuRef }) {
                 <strong className="text-orange-400">Cards in Inventory:</strong>{' '}
                 <span className="text-yellow-300 font-semibold">{cardCount}</span>
               </p>
+              <p className="text-lg">
+                <strong className="text-orange-400">Decks Created:</strong>{' '}
+                <span className="text-yellow-300 font-semibold">{deckCount}</span>
+              </p>
               <button
+                type="button"
                 onClick={() => {
                   clearTimeout(timeoutRef.current);
                   setMenuOpen(false);

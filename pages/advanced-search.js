@@ -35,19 +35,18 @@ export default function AdvancedSearch() {
   const [hasMore, setHasMore] = useState(false);
   const [nextPageUrl, setNextPageUrl] = useState(null);
 
-  // debug log shown on page (helps trace webhook + API responses)
+  // debug log shown on page
   const [webhookLog, setWebhookLog] = useState([]);
   const resultsRef = useRef(null);
 
   const pushLog = (msg, obj = null) => {
     const line = `${new Date().toISOString()} - ${msg}${obj ? ' | ' + (typeof obj === 'string' ? obj : JSON.stringify(obj)) : ''}`;
-    // console for devtools + visible log
     // eslint-disable-next-line no-console
     console.log(line, obj ?? '');
     setWebhookLog((s) => [line, ...s].slice(0, 200));
   };
 
-  // --- Restore / Save state to sessionStorage (unchanged logic) ---
+  // Restore state
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -140,9 +139,12 @@ export default function AdvancedSearch() {
     return `https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&unique=cards&order=name&page=${pageNum}`;
   };
 
-  // --- This sendDiscordWebhook is copied to match exactly the working payload from _app.js ---
+  // send webhook (includes source info)
   const sendDiscordWebhook = async (card) => {
     if (!card) return pushLog('sendDiscordWebhook called with no card');
+
+    // safe get page url (window only available client-side)
+    const pageUrl = typeof window !== 'undefined' ? window.location.href : router.pathname;
 
     const payload = {
       username: 'Conjuerers Crypt Bot',
@@ -156,14 +158,18 @@ export default function AdvancedSearch() {
             { name: 'Set', value: card.set_name || 'N/A', inline: true },
             { name: 'Rarity', value: card.rarity || 'N/A', inline: true },
             { name: 'Price (USD)', value: card.prices?.usd || 'N/A', inline: true },
+            // --- new fields showing source info ---
+            { name: 'Searched From', value: router.pathname || 'unknown', inline: true },
+            { name: 'Page URL', value: pageUrl || 'unknown', inline: false },
           ],
-          thumbnail: { url: card.image_uris?.small || (card.card_faces?.[0]?.image_uris?.small) || '' },
+          thumbnail: { url: card.image_uris?.small || card.card_faces?.[0]?.image_uris?.small || '' },
+          footer: { text: `Source: ${router.pathname || 'unknown'}` },
           timestamp: new Date().toISOString(),
         },
       ],
     };
 
-    pushLog('Posting webhook', { name: card.name });
+    pushLog('Posting webhook', { name: card.name, source: router.pathname, url: pageUrl });
 
     try {
       const res = await fetch('/api/send-to-discord', {
@@ -172,13 +178,11 @@ export default function AdvancedSearch() {
         body: JSON.stringify(payload),
       });
 
-      // read response text for debug
       let text;
-      try { text = await res.text(); } catch (e) { text = `<no-body: ${e.message}>`; }
+      try { text = await res.text(); } catch (_) { text = '<no-body>'; }
 
       if (!res.ok) {
         pushLog('Webhook POST failed', { status: res.status, statusText: res.statusText, body: text });
-        // also log to console for inspection
         // eslint-disable-next-line no-console
         console.error('[AdvancedSearch] webhook error', { status: res.status, statusText: res.statusText, body: text, payload });
         return false;
@@ -196,7 +200,7 @@ export default function AdvancedSearch() {
     }
   };
 
-  // fetch cards from scryfall
+  // fetch cards and trigger webhook for first result
   const fetchCards = async (pageUrl = null, resetPage = false) => {
     setLoading(true);
     setError(null);
@@ -226,7 +230,6 @@ export default function AdvancedSearch() {
         setNextPageUrl(data.has_more ? data.next_page : null);
         pushLog(`Scryfall returned ${data.data.length} results (has_more=${data.has_more})`);
 
-        // **Trigger webhook for first card** (same behavior as homepage)
         if (data.data && data.data.length > 0) {
           const first = data.data[0];
           pushLog('Triggering webhook for first result', { id: first.id, name: first.name });
@@ -268,7 +271,7 @@ export default function AdvancedSearch() {
     if (results.length && resultsRef.current) resultsRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [results]);
 
-  // manual resend helper for UI buttons
+  // manual resend helper
   const handleResend = async (card) => {
     pushLog('Manual resend requested', { id: card.id, name: card.name });
     await sendDiscordWebhook(card);
@@ -304,7 +307,6 @@ export default function AdvancedSearch() {
             <button onClick={handleNextPage} disabled={!hasMore || loading} className="px-4 py-2 rounded bg-gray-700 text-white disabled:opacity-50">Next</button>
           </div>
 
-          {/* Manual resend tools */}
           <div className="mt-6">
             <strong>Manual webhook tools</strong>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
