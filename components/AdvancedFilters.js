@@ -10,12 +10,15 @@ export default function AdvancedFilters({ filters, setFilters }) {
   };
 
   const toggleColor = (color) => {
-    setFilters((prev) => ({
-      ...prev,
-      colors: prev.colors.includes(color)
-        ? prev.colors.filter((c) => c !== color)
-        : [...prev.colors, color],
-    }));
+    setFilters((prev) => {
+      const currentColors = Array.isArray(prev.colors) ? prev.colors : [];
+      return {
+        ...prev,
+        colors: currentColors.includes(color)
+          ? currentColors.filter((c) => c !== color)
+          : [...currentColors, color],
+      };
+    });
   };
 
   return (
@@ -42,7 +45,7 @@ export default function AdvancedFilters({ filters, setFilters }) {
             <label key={color} className="flex items-center space-x-1">
               <input
                 type="checkbox"
-                checked={filters.colors.includes(color)}
+                checked={(filters.colors || []).includes(color)}
                 onChange={() => toggleColor(color)}
               />
               <span>{color}</span>

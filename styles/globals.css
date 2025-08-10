@@ -105,21 +105,15 @@ select:focus {
   text-shadow: 0 0 4px #6b21a8cc;
   letter-spacing: 0.05em;
 }
-
-/* Improved bubble text clarity */
 .bubble.text-white {
   color: #f3f3f3;
 }
 
 /* === CARD STYLE CONTAINERS === */
-
-/* Card container for proper tooltip overflow */
 .card-container {
   position: relative;
   overflow: visible !important;
 }
-
-/* Tooltip bubble for oracle text */
 .card-tooltip {
   position: absolute;
   z-index: 9999;
@@ -127,16 +121,16 @@ select:focus {
   left: 0;
   margin-top: 0.25rem;
   padding: 0.75rem 1rem;
-  width: 18rem; /* 288px */
+  width: 18rem;
   max-width: 90vw;
   background: rgba(0, 0, 0, 0.9);
   color: white;
-  font-size: 0.875rem; /* text-sm */
+  font-size: 0.875rem;
   border-radius: 0.5rem;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
   white-space: pre-wrap;
   word-wrap: break-word;
-  pointer-events: none; /* don't block mouse */
+  pointer-events: none;
   user-select: text;
   transition: opacity 0.3s ease;
 }
@@ -152,34 +146,44 @@ select:focus {
 
 /* === ANIMATIONS === */
 @keyframes pulse-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(126, 95, 221, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 15px rgba(167, 139, 250, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(167, 139, 250, 0);
-  }
+  0% { box-shadow: 0 0 0 0 rgba(126, 95, 221, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(167, 139, 250, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); }
 }
-
 .animate-pulse-glow {
   animation: pulse-glow 5s infinite;
 }
 
+/* Improved magic-wisp effect */
 @keyframes magic-wisp {
-  0%, 100% {
+  0% {
     opacity: 0.8;
-    transform: translateX(0) translateY(0);
+    transform: translate(0, 0) scale(1);
+    text-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(6px, -8px) scale(1.05);
+    text-shadow: 0 0 14px rgba(212, 175, 55, 0.8);
   }
   50% {
+    opacity: 0.9;
+    transform: translate(-5px, -14px) scale(1);
+    text-shadow: 0 0 18px rgba(167, 139, 250, 0.9);
+  }
+  75% {
     opacity: 1;
-    transform: translateX(5px) translateY(-10px);
+    transform: translate(4px, -8px) scale(1.05);
+    text-shadow: 0 0 14px rgba(212, 175, 55, 0.8);
+  }
+  100% {
+    opacity: 0.8;
+    transform: translate(0, 0) scale(1);
+    text-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
   }
 }
-
 .animate-magic-wisp {
-  animation: magic-wisp 6s ease-in-out infinite;
+  animation: magic-wisp 4s ease-in-out infinite;
 }
 
 /* === RESPONSIVE === */
@@ -188,33 +192,60 @@ select:focus {
     font-size: 14px;
     padding: 0 10px;
   }
-
   @layer components {
-    .btn {
-      @apply text-sm px-4 py-2;
-    }
-
-    input,
-    textarea {
-      @apply text-sm;
-    }
-
-    a {
-      color: #38bdf8;
-      transition-property: color;
-      transition-duration: 300ms;
-    }
-    a:hover {
-      color: #a78bfa;
-    }
+    .btn { @apply text-sm px-4 py-2; }
+    input, textarea { @apply text-sm; }
+    a { color: #38bdf8; transition-property: color; transition-duration: 300ms; }
+    a:hover { color: #a78bfa; }
   }
 }
 
 /* === USER MENU GLOW === */
-.user-menu-btn {
-  @apply relative;
-}
+.user-menu-btn { @apply relative; }
 .user-menu-btn::after {
   content: '';
   @apply absolute inset-0 rounded-full border border-[#a78bfa] blur-sm opacity-90 animate-pulse;
+}
+
+/* === LIGHTNING BORDER EFFECT ===
+   Use by adding `class="lightning-border"` to an element.
+   The element's inner content should have a solid background (example: .bg-[#0f1220])
+   so the gradient shows as a glowing border around it.
+*/
+.lightning-border {
+  position: relative;
+  z-index: 0;
+  border-radius: 1rem;
+  /* fallback padding if you don't use Tailwind p-[2px] on the element */
+  padding: 2px;
+}
+
+/* the animated gradient background sits behind the element and is blurred to look like glow */
+.lightning-border::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(120deg, #00ffff, #a78bfa, #ffd43b, #00ffff);
+  background-size: 400% 400%;
+  border-radius: inherit;
+  z-index: -1;
+  filter: blur(6px) saturate(1.1);
+  opacity: 0.95;
+  animation: lightning-gradient 3s linear infinite;
+}
+
+/* intensify on hover for a flash effect */
+.lightning-border:hover::before {
+  filter: blur(8px) brightness(1.4) saturate(1.2);
+  animation-duration: 1.8s;
+}
+
+/* smoothly move the gradient */
+@keyframes lightning-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }

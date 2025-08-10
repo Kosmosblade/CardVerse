@@ -59,10 +59,14 @@ export default function Home({ query = '' }) {
             className="max-w-3xl text-center select-none"
           >
             <h1 className="text-4xl font-extrabold mb-6 text-arcane-gold animate-pulse-glow tracking-widest">
-              Welcome to <span className="text-indigo-400 animate-magic-wisp">Conjurer's Crypt</span>
+              Welcome to{' '}
+              <span className="text-indigo-400 animate-magic-wisp">
+                Conjurer's Crypt
+              </span>
             </h1>
             <p className="text-lg text-indigo-300 leading-relaxed max-w-xl mx-auto">
-              Your gateway to Magic: The Gathering decks, news, and community. Start typing in the search bar to explore the latest and greatest!
+              Your gateway to Magic: The Gathering decks, news, and community.
+              Start typing in the search bar to explore the latest and greatest!
             </p>
           </motion.div>
         )}
@@ -84,28 +88,38 @@ export default function Home({ query = '' }) {
 
           <div className="space-y-10">
             {news.map(({ title, date, excerpt, url }, i) => (
-              <article key={i} className="group">
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="no-underline"
-                >
-                  <h3 className="text-2xl font-bold text-arcane-gold group-hover:text-indigo-400 transition-colors duration-300 tracking-wide">
-                    {title}
-                  </h3>
-                </a>
-                <time className="block mt-1 text-sm text-indigo-300">{date}</time>
-                <p className="mt-3 text-indigo-200 leading-relaxed">{excerpt}</p>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block mt-2 text-indigo-400 hover:text-indigo-600 font-semibold transition-colors duration-300 tracking-wide"
-                  aria-label={`Read more about ${title}`}
-                >
-                  Read more &rarr;
-                </a>
+              <article
+                key={i}
+                className="group lightning-border rounded-xl p-[2px] /* outer animated border */"
+              >
+                {/* inner card that covers the center so gradient shows only as border */}
+                <div className="bg-[#0f1220] rounded-lg p-6 relative z-10 shadow-xl">
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-underline"
+                  >
+                    <h3 className="text-2xl font-bold text-arcane-gold group-hover:text-indigo-400 transition-colors duration-300 tracking-wide">
+                      {title}
+                    </h3>
+                  </a>
+                  <time className="block mt-1 text-sm text-indigo-300">
+                    {date}
+                  </time>
+                  <p className="mt-3 text-indigo-200 leading-relaxed">
+                    {excerpt}
+                  </p>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 text-indigo-400 hover:text-indigo-600 font-semibold transition-colors duration-300 tracking-wide"
+                    aria-label={`Read more about ${title}`}
+                  >
+                    Read more &rarr;
+                  </a>
+                </div>
               </article>
             ))}
           </div>
