@@ -36,7 +36,7 @@ export default function AdvancedSearch() {
 
   const resultsRef = useRef(null);
 
-  // Restore state from sessionStorage on mount
+  // Restore state from sessionStorage
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -53,7 +53,7 @@ export default function AdvancedSearch() {
     }
   }, []);
 
-  // Save state to sessionStorage on changes
+  // Save state to sessionStorage
   useEffect(() => {
     try {
       const stateToSave = {
@@ -69,19 +69,16 @@ export default function AdvancedSearch() {
     }
   }, [filters, results, currentPage, hasMore, nextPageUrl]);
 
-  // Clear saved state on full page unload (refresh or tab close)
+  // Clear saved state on full unload
   useEffect(() => {
     const handleBeforeUnload = () => {
       sessionStorage.removeItem(STORAGE_KEY);
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  // Save state before route changes (e.g. when navigating to card detail)
+  // Save state on route changes
   useEffect(() => {
     const handleRouteChangeStart = () => {
       try {
@@ -97,9 +94,7 @@ export default function AdvancedSearch() {
         console.warn('Failed to save advanced search state on route change:', e);
       }
     };
-
     router.events.on('routeChangeStart', handleRouteChangeStart);
-
     return () => {
       router.events.off('routeChangeStart', handleRouteChangeStart);
     };
@@ -160,17 +155,24 @@ export default function AdvancedSearch() {
 
   const generatePageUrl = (pageNum) => {
     const query = buildQuery(filters).trim();
+    if (!query) return null; // Prevent empty search
     return `https://api.scryfall.com/cards/search?q=${encodeURIComponent(
       query
     )}&unique=cards&order=name&page=${pageNum}`;
   };
 
-  const fetchCards = async (pageUrl = null) => {
+  const fetchCards = async (pageUrl = null, resetPage = false) => {
     setLoading(true);
     setError(null);
 
     try {
-      const url = pageUrl || generatePageUrl(currentPage);
+      const url = pageUrl || generatePageUrl(resetPage ? 1 : currentPage);
+      if (!url) {
+        setError('Please enter at least one search filter.');
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch(url);
       const data = await res.json();
 
@@ -198,7 +200,7 @@ export default function AdvancedSearch() {
   const handleSubmit = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchCards();
+    fetchCards(null, true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
