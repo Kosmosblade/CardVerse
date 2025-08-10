@@ -151,16 +151,18 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-[#0b1f3a] text-white rounded-lg shadow-md border border-blue-800">
-      <h2 className="text-2xl font-bold mb-4 text-blue-200">Account</h2>
+    <div className="max-w-md mx-auto mt-10 p-6 bg-[#0b1f3a] text-white rounded-lg shadow-md">
+      <h2 className="text-3xl font-bold mb-4 text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">
+        Account
+      </h2>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-400 drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]">{error}</p>}
       {message && (
         <p
           className={`text-sm ${
             message.toLowerCase().includes('updated') || message.toLowerCase().includes('successfully')
               ? 'text-green-400'
-              : 'text-red-400'
+              : 'text-red-400 drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]'
           }`}
         >
           {message}
@@ -168,77 +170,102 @@ export default function Profile() {
       )}
 
       {user ? (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="flex items-center space-x-4">
             <img
               src={avatarUrl || '/default-avatar.png'}
               alt="User Avatar"
-              className="w-16 h-16 rounded-full border border-white object-cover"
+              className="w-16 h-16 rounded-full object-cover"
             />
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Change Avatar</label>
+              <label className="block text-sm text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)] mb-1">
+                Change Avatar
+              </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleAvatarUpload}
-                className="text-sm text-white"
+                className="text-sm text-amber-400"
                 disabled={uploading}
               />
             </div>
           </div>
 
           <div>
-            <label className="text-sm text-gray-400">Username:</label>
+            <label className="text-sm text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">
+              Username:
+            </label>
             {editingUsername ? (
               <div className="flex space-x-2 mt-1">
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="px-2 py-1 rounded bg-gray-800 text-white border border-gray-600 w-full"
+                  className="px-2 py-1 rounded bg-black-800 text-white border border-gray-600 w-full"
                 />
                 <button
                   onClick={handleUsernameSave}
-                  className="text-sm bg-blue-600 px-2 rounded hover:bg-blue-700"
+                  className="p-1 rounded border border-gray-400 hover:bg-gray-200 bg-white"
                 >
-                  Save
+                  <img src="/assets/save.png" alt="Save" className="h-6 w-6 object-contain" />
                 </button>
               </div>
             ) : (
               <div className="flex items-center justify-between mt-1">
-                <span className="text-gray-300">{subscription?.username || 'N/A'}</span>
+                <span className="text-red-400 font-semibold drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]">
+                  {subscription?.username || 'N/A'}
+                </span>
                 <button
                   onClick={() => setEditingUsername(true)}
-                  className="text-sm text-blue-400 hover:underline"
+                  className="text-sm text-yellow-400 hover:underline drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]"
                 >
                   Edit
                 </button>
               </div>
             )}
           </div>
-          
+
           <p>
-            <strong>Created:</strong>{' '}
-            <span className="text-gray-300">{new Date(user.created_at).toLocaleString()}</span>
+            <strong className="text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">
+              Created:
+            </strong>{' '}
+            <span className="text-red-400 font-semibold drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]">
+              {new Date(user.created_at).toLocaleString()}
+            </span>
           </p>
 
           {subscription ? (
             <>
               <p>
-                <strong>Subscription Type:</strong>{' '}
-                <span className="text-gray-300">{subscription.subscription_type}</span>
+                <strong className="text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">
+                  Subscription Type:
+                </strong>{' '}
+                <span className="text-red-400 font-semibold drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]">
+                  {subscription.subscription_type}
+                </span>
               </p>
               <p>
-                <strong>Max Cards:</strong> <span className="text-gray-300">{subscription.max_card_limit}</span>
+                <strong className="text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">Max Cards:</strong>{' '}
+                <span className="text-red-400 font-semibold drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]">
+                  {subscription.max_card_limit}
+                </span>
               </p>
               <p>
-                <strong>Cards in Inventory:</strong>{' '}
-                <span className="text-gray-300">{subscription.current_card_count}</span>
+                <strong className="text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">
+                  Cards in Inventory:
+                </strong>{' '}
+                <span className="text-red-400 font-semibold drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]">
+                  {subscription.current_card_count}
+                </span>
               </p>
               {subscription.subscription_end && (
                 <p>
-                  <strong>Subscription Ends:</strong>{' '}
-                  <span className="text-gray-300">{new Date(subscription.subscription_end).toLocaleString()}</span>
+                  <strong className="text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">
+                    Subscription Ends:
+                  </strong>{' '}
+                  <span className="text-red-400 font-semibold drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]">
+                    {new Date(subscription.subscription_end).toLocaleString()}
+                  </span>
                 </p>
               )}
 
@@ -252,11 +279,13 @@ export default function Profile() {
               )}
             </>
           ) : (
-            <p className="text-gray-400">Subscription info not available.</p>
+            <p className="text-red-400 drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]">
+              Subscription info not available.
+            </p>
           )}
         </div>
       ) : (
-        <p className="text-gray-400">Loading user info...</p>
+        <p className="text-red-400 drop-shadow-[0_0_6px_rgba(255,0,0,0.6)]">Loading user info...</p>
       )}
     </div>
   );

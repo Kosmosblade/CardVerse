@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase'; // adjust path if needed
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -8,7 +8,6 @@ export default function Signup() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Leaked password protection using HaveIBeenPwned
   const isLeaked = async (password) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -43,7 +42,6 @@ export default function Signup() {
       return;
     }
 
-    // Sign up user
     const { data, error } = await supabase.auth.signUp({ email, password });
 
     if (error) {
@@ -52,7 +50,6 @@ export default function Signup() {
       return;
     }
 
-    // Insert username into profiles table
     if (data?.user) {
       const { error: profileError } = await supabase
         .from('profiles')
@@ -72,7 +69,7 @@ export default function Signup() {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-[#0b1f3a] text-white rounded-lg shadow-md border border-blue-800">
-      <h2 className="text-2xl font-bold mb-4 text-blue-200">Sign Up</h2>
+      
       <form onSubmit={handleSignup} className="flex flex-col gap-4">
         <input
           type="email"
@@ -100,15 +97,37 @@ export default function Signup() {
           onChange={(e) => setUsername(e.target.value)}
           required
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className={`bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 transition ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
-        >
-          {loading ? 'Signing up...' : 'Sign Up'}
-        </button>
+
+        {/* Sign Up Button */}
+        <div className="flex justify-center mt-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className={`bg-transparent p-0 border-0 rounded hover:opacity-90 transition duration-300 ${
+              loading ? 'opacity-60 cursor-not-allowed' : ''
+            }`}
+          >
+            {loading ? (
+              <span className="text-white text-sm">Signing up...</span>
+            ) : (
+              <img
+                src="/assets/signup.png"
+                alt="Sign Up"
+                className="h-14 w-auto pointer-events-none"
+              />
+            )}
+          </button>
+        </div>
+
+        {/* Message Output */}
         {message && (
-          <p className={`text-sm ${message.toLowerCase().includes('successful') ? 'text-green-400' : 'text-red-400'}`}>
+          <p
+            className={`text-sm text-center mt-2 ${
+              message.toLowerCase().includes('successful')
+                ? 'text-green-400'
+                : 'text-red-400'
+            }`}
+          >
             {message}
           </p>
         )}

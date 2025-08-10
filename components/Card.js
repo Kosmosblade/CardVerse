@@ -1,13 +1,12 @@
-import React, { useEffect, useState, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import Link from 'next/link';
 
-// Memoize for performance, re-renders only if card or count changes
-const Card = memo(function Card({ card, count = 1 }) {
+const Card = memo(function Card({ card, count = 1, returnUrl }) {
   const [imageSrc, setImageSrc] = useState(null);
+  const [isOracleExpanded, setIsOracleExpanded] = useState(false);
 
   useEffect(() => {
     if (card) {
-      // Prefer front face image if card_faces exists
       const imageUrl =
         card.image_uris?.normal ||
         card.card_faces?.[0]?.image_uris?.normal ||
@@ -15,18 +14,6 @@ const Card = memo(function Card({ card, count = 1 }) {
       setImageSrc(imageUrl);
     }
   }, [card]);
-
-  const oracleText = card?.oracle_text || 'No oracle text available';
-  const price =
-    card?.prices?.usd && !isNaN(parseFloat(card.prices.usd))
-      ? parseFloat(card.prices.usd).toFixed(2)
-      : null;
-  const colors = card?.color_identity?.length
-    ? card.color_identity.join(', ')
-    : null;
-  const rarity = card?.rarity
-    ? card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)
-    : null;
 
   if (!card) {
     return (
@@ -40,11 +27,33 @@ const Card = memo(function Card({ card, count = 1 }) {
     );
   }
 
+  // Build href with returnUrl param if exists
+  const href = {
+    pathname: `/card/${card.id}`,
+    query: {},
+  };
+  if (returnUrl) {
+    href.query.returnUrl = returnUrl;
+  }
+
+  const oracleText = card?.oracle_text || 'No oracle text available';
+  const price =
+    card?.prices?.usd && !isNaN(parseFloat(card.prices.usd))
+      ? parseFloat(card.prices.usd).toFixed(2)
+      : null;
+  const colors = card?.color_identity?.length
+    ? card.color_identity.join(', ')
+    : null;
+  const rarity = card?.rarity
+    ? card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)
+    : null;
+
   return (
-    <Link href={`/card/${card.id}`} passHref legacyBehavior>
-      <a
+    <Link href={href} passHref>
+      <div
         className="bg-black bg-opacity-90 rounded-2xl shadow-lg hover:shadow-2xl transition duration-300 p-4 flex flex-col items-center text-center border border-gray-700 cursor-pointer select-text text-white"
         aria-label={`View details for ${card.name}`}
+        onMouseLeave={() => setIsOracleExpanded(false)}
       >
         {imageSrc ? (
           <img
@@ -84,14 +93,22 @@ const Card = memo(function Card({ card, count = 1 }) {
         </div>
 
         <p
-          className="text-xs text-gray-300 mt-3 max-h-[4.5em] overflow-hidden text-ellipsis line-clamp-3 hover:line-clamp-none transition-all duration-300"
-          title={oracleText}
+          className={`text-xs text-gray-300 mt-3 w-full transition-all duration-300 cursor-pointer select-text ${
+            isOracleExpanded
+              ? 'max-h-full whitespace-pre-wrap overflow-visible line-clamp-none'
+              : 'max-h-[4.5em] overflow-hidden line-clamp-3'
+          }`}
+          title={!isOracleExpanded ? oracleText : undefined}
+          onMouseEnter={() => setIsOracleExpanded(true)}
+          onFocus={() => setIsOracleExpanded(true)}
+          onMouseLeave={() => setIsOracleExpanded(false)}
+          onBlur={() => setIsOracleExpanded(false)}
         >
           {oracleText}
         </p>
 
         <span className="bubble mt-2 select-none text-white">x{count || 0}</span>
-      </a>
+      </div>
     </Link>
   );
 });

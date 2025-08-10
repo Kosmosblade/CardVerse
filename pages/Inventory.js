@@ -478,78 +478,100 @@ const handleFlip = useCallback((id) => {
   }, [inventory]);
 
   return (
-    <div className="flex h-screen bg-[#0a1528] text-white overflow-hidden">
-      {/* LEFT PREVIEW */}
-      <aside className="w-[240px] bg-[#0e1d35] p-4 border-r border-blue-900 flex-shrink-0">
-        <h1 className="text-xl font-bold text-cyan-300 mb-4">Conjuring Crypt</h1>
-        {(hoveredCard || selectedCard) && (
-          <>
-            <img
-              src={(hoveredCard || selectedCard).image_url || '/placeholder.jpg'}
-              alt={(hoveredCard || selectedCard).name}
-              className="w-full h-[260px] object-contain rounded mb-2"
-            />
-            <div className="text-xs space-y-1 text-center">
-              <p className="font-bold">{(hoveredCard || selectedCard).name}</p>
-              <p>
-                Price:{' '}
-                {(hoveredCard || selectedCard).price > 0
-                  ? `$${(hoveredCard || selectedCard).price.toFixed(2)}`
-                  : 'N/A'}
-              </p>
-              <p>Set: {(hoveredCard || selectedCard).set_name}</p>
-              <a
-                href={(hoveredCard || selectedCard).scryfall_uri}
-                target="_blank"
-                rel="noreferrer"
-                className="underline text-blue-400"
-              >
-                View on Scryfall
-              </a>
-            </div>
-          </>
-        )}
-        <CardCountDisplay user={user} refreshTrigger={refreshTrigger} />
-      </aside>
+  <div className="min-h-screen bg-cover bg-center text-black p-6">
 
-      {/* CENTER GRID & FORM */}
-      <main className="flex-1 p-6 overflow-y-auto flex flex-col">
-        {/* ADD FORM */}
-        <form
-          onSubmit={handleAdd}
-          className="bg-[#1b2e4b] rounded-lg p-4 shadow mb-6 max-w-3xl mx-auto"
+
+   <main className="flex min-h-screen w-full p-6 bg-transparent items-start justify-start gap-6">
+
+
+  <div className="w-full flex flex-col md:flex-row md:items-start gap-1">
+
+
+{/* LEFT COLUMN - PREVIEW & CARD COUNT */}
+<div className="w-full md:w-1/4 md:text-left text-left img-left">
+  <h1 className="text-xl font-bold text-white-300 mb-4">
+    Card Preview
+  </h1>
+
+  {(hoveredCard || selectedCard) && (
+    <>
+      <img
+        src={(hoveredCard || selectedCard).image_url || '/placeholder.jpg'}
+        alt={(hoveredCard || selectedCard).name}
+        className="w-full h-auto object-contain rounded mb-2"
+      />
+      <div className="text-xs space-y-1">
+        <p className="font-bold">{(hoveredCard || selectedCard).name}</p>
+        <p>
+          Price:{' '}
+          {(hoveredCard || selectedCard).price > 0
+            ? `$${(hoveredCard || selectedCard).price.toFixed(2)}`
+            : 'N/A'}
+        </p>
+        <p>Set: {(hoveredCard || selectedCard).set_name}</p>
+        <a
+          href={(hoveredCard || selectedCard).scryfall_uri}
+          target="_blank"
+          rel="noreferrer"
+          className="underline text-blue-400"
         >
-          <div className="flex flex-wrap gap-4 justify-center items-end">
-            <div className="flex-1 min-w-[200px]">
-              <label className="block mb-1">Card Name</label>
-              <input
-                type="text"
-                value={cardName}
-                onChange={(e) => setCardName(e.target.value)}
-                className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
-                placeholder="Black Lotus"
-                required
-                autoComplete="off"
-              />
-            </div>
-            <div className="w-20">
-              <label className="block mb-1">Qty</label>
-              <input
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
-                required
-              />
-            </div>
-            <button className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-white">
-              Add
-            </button>
-          </div>
-        </form>
+          View on Scryfall
+        </a>
+      </div>
+    </>
+  )}
 
-        {/* CARD GRID */}
+  <div className="text-white font-bold mt-15">
+    <CardCountDisplay user={user} refreshTrigger={refreshTrigger} />
+  </div>
+</div>
+
+
+    {/* RIGHT COLUMN - ADD CARD FORM + INVENTORY */}
+    <div className="w-full md:w-3/4 flex flex-col items-center">
+
+      {/* ADD CARD FORM */}
+      <form
+        onSubmit={handleAdd}
+        className="bg-opacity-60 rounded-lg p-4 shadow-lg mb-6 w-full max-w-3xl"
+      >
+        <div className="flex flex-wrap gap-4 justify-center items-end">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block mb-1">Card Name</label>
+            <input
+              type="text"
+              value={cardName}
+              onChange={(e) => setCardName(e.target.value)}
+              className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
+              placeholder="Black Lotus"
+              required
+              autoComplete="off"
+            />
+          </div>
+          <div className="w-20">
+            <label className="block mb-1">Qty</label>
+            <input
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
+              required
+            />
+          </div>
+          <button type="submit" className="p-0 border-none bg-transparent">
+  <img
+    src="/assets/add_card.png"
+    alt="Add Card"
+    className="w-32 h-auto hover:opacity-80 transition"
+  />
+</button>
+
+        </div>
+      </form>
+
+      {/* CARD GRID */}
+      <div className="w-full max-w-6xl">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {loading ? (
             <p className="col-span-full text-center">Loading…</p>
@@ -569,7 +591,9 @@ const handleFlip = useCallback((id) => {
           >
             Previous
           </button>
-          <span className="px-2 py-2">Page {currentPage}</span>
+          <span className="px-4 py-2 bg-gray-800 rounded">
+            Page {currentPage}
+          </span>
           <button
             onClick={handleNext}
             disabled={inventory.length < pageSize}
@@ -578,8 +602,12 @@ const handleFlip = useCallback((id) => {
             Next
           </button>
         </div>
-      </main>
+      </div>
+    </div>
+  </div>
+</main>
 
+  
       {/* RIGHT FILTER DRAWER (fixed) */}
 <aside
   className={`fixed top-0 right-0 h-full bg-[#1b2e4b] shadow-lg p-4 transition-transform duration-300 filterbar-container ${

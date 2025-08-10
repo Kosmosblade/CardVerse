@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 
 export default function CardDetail() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, returnUrl } = router.query;
 
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
@@ -20,16 +20,21 @@ export default function CardDetail() {
   const [error, setError] = useState(null);
   const [flipped, setFlipped] = useState(false);
 
+  // Initialize authentication and listen to auth state changes
   useEffect(() => {
     const initAuth = async () => {
       setAuthLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
       if (error) console.error('getSession error:', error);
       setSession(session);
       setUser(session?.user ?? null);
       setAuthLoading(false);
     };
     initAuth();
+
     const { data: listener } = supabase.auth.onAuthStateChange((_, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
@@ -38,6 +43,7 @@ export default function CardDetail() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Fetch card data when id changes
   useEffect(() => {
     if (!id) return;
     const fetchCard = async () => {
@@ -62,8 +68,10 @@ export default function CardDetail() {
     fetchCard();
   }, [id]);
 
+  // Reset flip when card or print changes
   useEffect(() => setFlipped(false), [card, print]);
 
+  // Add to inventory handler
   const handleAddToInventory = async () => {
     if (quantity < 1) {
       setMessage({ type: 'error', text: 'Quantity must be at least 1' });
@@ -81,68 +89,65 @@ export default function CardDetail() {
       const scryfall_id = print?.id || card.id;
       const user_id = user.id;
 
-    // Check if card already exists for this user
-const { data: existingCard, error: fetchError } = await supabase
-  .from('inventory')
-  .select('id, quantity')
-  .eq('scryfall_id', scryfall_id)
-  .eq('user_id', user_id)
-  .single();
+      // Check if card already exists for this user
+      const { data: existingCard, error: fetchError } = await supabase
+        .from('inventory')
+        .select('id, quantity')
+        .eq('scryfall_id', scryfall_id)
+        .eq('user_id', user_id)
+        .single();
 
-if (fetchError && fetchError.code !== 'PGRST116') {
-  throw fetchError;
-}
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
 
-const frontImage =
-  print?.image_uris?.normal ||
-  print?.card_faces?.[0]?.image_uris?.normal ||
-  card.image_uris?.normal ||
-  card.card_faces?.[0]?.image_uris?.normal;
+      const frontImage =
+        print?.image_uris?.normal ||
+        print?.card_faces?.[0]?.image_uris?.normal ||
+        card.image_uris?.normal ||
+        card.card_faces?.[0]?.image_uris?.normal;
 
-const backImage =
-  print?.card_faces?.[1]?.image_uris?.normal ||
-  card.card_faces?.[1]?.image_uris?.normal ||
-  null;
+      const backImage =
+        print?.card_faces?.[1]?.image_uris?.normal ||
+        card.card_faces?.[1]?.image_uris?.normal ||
+        null;
 
-const set_name = print?.set_name || card.set_name;
-const scryfall_uri = print?.scryfall_uri || card.scryfall_uri;
-const rawPrice = print?.prices?.usd || card.prices?.usd;
-const price = rawPrice ? parseFloat(rawPrice) : 0;
+      const set_name = print?.set_name || card.set_name;
+      const scryfall_uri = print?.scryfall_uri || card.scryfall_uri;
+      const rawPrice = print?.prices?.usd || card.prices?.usd;
+      const price = rawPrice ? parseFloat(rawPrice) : 0;
 
-let colors = [];
-const source = print || card;
+      let colors = [];
+      const source = print || card;
 
-if (Array.isArray(source.colors) && source.colors.length > 0) {
-  colors = source.colors;
-} else if (Array.isArray(source.card_faces)) {
-  colors = [...new Set(source.card_faces.flatMap(face => face.colors || []))];
-}
+      if (Array.isArray(source.colors) && source.colors.length > 0) {
+        colors = source.colors;
+      } else if (Array.isArray(source.card_faces)) {
+        colors = [...new Set(source.card_faces.flatMap((face) => face.colors || []))];
+      }
 
-// fallback to color_identity if colors empty
-if (colors.length === 0 && Array.isArray(source.color_identity) && source.color_identity.length > 0) {
-  colors = source.color_identity;
-}
+      if (colors.length === 0 && Array.isArray(source.color_identity) && source.color_identity.length > 0) {
+        colors = source.color_identity;
+      }
 
-// Add "Colorless" if still empty and meets these conditions:
-if (colors.length === 0) {
-  const manaCost = source.mana_cost || '';
-  const typeLine = source.type_line || '';
+      if (colors.length === 0) {
+        const manaCost = source.mana_cost || '';
+        const typeLine = source.type_line || '';
 
-  if (
-    manaCost.includes('{C}') ||  // explicit colorless mana cost
-    (typeLine.includes('Land') && manaCost === '') ||  // land with no mana cost
-    (typeLine.includes('Artifact') && (manaCost === '' || manaCost === '{0}' || !manaCost))  // 0 mana cost artifact
-  ) {
-    colors = ['Colorless'];
-  }
-}
-
+        if (
+          manaCost.includes('{C}') ||
+          (typeLine.includes('Land') && manaCost === '') ||
+          (typeLine.includes('Artifact') && (manaCost === '' || manaCost === '{0}' || !manaCost))
+        ) {
+          colors = ['Colorless'];
+        }
+      }
 
       let type_line = '';
       if (source?.type_line) {
         type_line = source.type_line;
       } else if (source?.card_faces?.length) {
-        type_line = source.card_faces.map(face => face.type_line).filter(Boolean).join(' // ');
+        type_line = source.card_faces.map((face) => face.type_line).filter(Boolean).join(' // ');
       }
 
       const { data: profile } = await supabase
@@ -153,7 +158,6 @@ if (colors.length === 0) {
       const username = profile?.username || user.email;
 
       if (existingCard) {
-        // Update quantity
         const newQty = existingCard.quantity + quantity;
         const { error: updateError } = await supabase
           .from('inventory')
@@ -161,23 +165,24 @@ if (colors.length === 0) {
           .eq('id', existingCard.id);
         if (updateError) throw updateError;
       } else {
-        // Insert new
         const { error: insertError } = await supabase
           .from('inventory')
-          .insert([{
-            name,
-            quantity,
-            image_url: frontImage,
-            back_image_url: backImage,
-            set_name,
-            scryfall_uri,
-            price,
-            scryfall_id,
-            user_id,
-            username,
-            colors,
-            type_line,
-          }]);
+          .insert([
+            {
+              name,
+              quantity,
+              image_url: frontImage,
+              back_image_url: backImage,
+              set_name,
+              scryfall_uri,
+              price,
+              scryfall_id,
+              user_id,
+              username,
+              colors,
+              type_line,
+            },
+          ]);
         if (insertError) throw insertError;
       }
 
@@ -191,7 +196,6 @@ if (colors.length === 0) {
     }
   };
 
-
   if (loading) {
     return <div className="text-center mt-20 text-gray-300">Loading card data...</div>;
   }
@@ -199,7 +203,10 @@ if (colors.length === 0) {
     return (
       <div className="text-center mt-20 text-gray-300">
         <p>Error: {error}</p>
-        <button onClick={() => router.back()} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded">
+        <button
+          onClick={() => (returnUrl ? router.push(returnUrl) : router.back())}
+          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+        >
           Go Back
         </button>
       </div>
@@ -209,12 +216,19 @@ if (colors.length === 0) {
     return (
       <div className="text-center mt-20 text-gray-300">
         <p>Card not found.</p>
-        <button onClick={() => router.back()} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded">
+        <button
+          onClick={() => (returnUrl ? router.push(returnUrl) : router.back())}
+          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+        >
           Go Back
         </button>
       </div>
     );
   }
+
+  const layout = print?.layout || card.layout;
+  const isTransformCard = layout === 'transform';
+  const isSplitCard = layout === 'split';
 
   const frontImage =
     print?.image_uris?.normal ||
@@ -222,52 +236,62 @@ if (colors.length === 0) {
     card.image_uris?.normal ||
     card.card_faces?.[0]?.image_uris?.normal ||
     'https://via.placeholder.com/223x310?text=No+Image';
+
   const backImage =
     print?.card_faces?.[1]?.image_uris?.normal ||
-    card.card_faces?.[1]?.image_uris?.normal || null;
-
-  const oracleText =
-    print?.oracle_text ||
-    print?.card_faces?.[0]?.oracle_text ||
-    card.oracle_text ||
-    card.card_faces?.[0]?.oracle_text ||
-    'No description';
+    card.card_faces?.[1]?.image_uris?.normal ||
+    null;
 
   const rawPrice = print?.prices?.usd || card.prices?.usd;
   const displayPrice = rawPrice ? `$${parseFloat(rawPrice).toFixed(2)}` : 'N/A';
+
   const legalityList = Object.entries(card.legalities || {}).map(([fmt, st]) => ({
     format: fmt.charAt(0).toUpperCase() + fmt.slice(1),
     status: st.charAt(0).toUpperCase() + st.slice(1),
   }));
 
-  const isTransformCard = (print?.layout || card.layout) === 'transform';
-
   return (
-    <div className="max-w-6xl mx-auto mt-16 p-6 bg-[#112b4a] text-white rounded-xl shadow-2xl">
+    <div className="max-w-6xl mx-auto mt-16 p-6 text-white shadow-2xl">
       <div className="flex flex-col lg:flex-row gap-10">
         <div className="flex-shrink-0 flex flex-col items-center perspective-800">
-          <div className={`relative w-[280px] h-[390px] transform-style-preserve-3d transition-transform duration-700 ${flipped ? 'rotate-y-180' : ''}`}>
+          {isSplitCard ? (
             <img
               src={frontImage}
               alt={card.name}
-              className="absolute w-full h-full rounded-lg shadow-lg backface-hidden"
+              className="w-[280px] h-[390px] rounded-lg shadow-lg"
             />
-            {backImage && (
+          ) : (
+            <div
+              className={`relative w-[280px] h-[390px] transform-style-preserve-3d transition-transform duration-700 ${
+                flipped ? 'rotate-y-180' : ''
+              }`}
+            >
               <img
-                src={backImage}
-                alt={`${card.name} back`}
-                className="absolute w-full h-full rounded-lg shadow-lg backface-hidden rotate-y-180"
+                src={frontImage}
+                alt={card.name}
+                className="absolute w-full h-full rounded-lg shadow-lg backface-hidden"
               />
-            )}
-          </div>
-          {backImage && (
+              {backImage && (
+                <img
+                  src={backImage}
+                  alt={`${card.name} back`}
+                  className="absolute w-full h-full rounded-lg shadow-lg backface-hidden rotate-y-180"
+                />
+              )}
+            </div>
+          )}
+          {!isSplitCard && backImage && (
             <button
               onClick={() => setFlipped(!flipped)}
               className="mt-4 px-4 py-2 bg-indigo-700 hover:bg-indigo-800 rounded select-none"
             >
               {flipped
-                ? isTransformCard ? 'Untransform' : 'Unflip'
-                : isTransformCard ? 'Transform' : 'Flip'}
+                ? isTransformCard
+                  ? 'Untransform'
+                  : 'Unflip'
+                : isTransformCard
+                ? 'Transform'
+                : 'Flip'}
             </button>
           )}
         </div>
@@ -281,7 +305,26 @@ if (colors.length === 0) {
 
           <div>
             <h2 className="font-semibold text-indigo-300">Oracle Text</h2>
-            <p className="text-blue-100 whitespace-pre-wrap">{oracleText}</p>
+            {isSplitCard ? (
+              <div className="text-blue-100 whitespace-pre-wrap space-y-4">
+                {card.card_faces.map((face, idx) => (
+                  <div key={idx}>
+                    <h3 className="font-bold text-lg">
+                      {face.name} — {face.mana_cost}
+                    </h3>
+                    <p>{face.oracle_text}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-blue-100 whitespace-pre-wrap">
+                {print?.oracle_text ||
+                  print?.card_faces?.[0]?.oracle_text ||
+                  card.oracle_text ||
+                  card.card_faces?.[0]?.oracle_text ||
+                  'No description'}
+              </p>
+            )}
           </div>
 
           {legalityList.length > 0 && (
@@ -306,48 +349,64 @@ if (colors.length === 0) {
             </div>
           )}
 
-          <div className="mt-6 bg-[#0b1f3a] p-4 rounded-xl border border-blue-900">
-            <h3 className="text-lg font-semibold text-blue-200 mb-2">Add to Inventory</h3>
+          <div className="mt-6 p-4 rounded text-black">
+            <h3 className="text-lg font-semibold mb-2">Add to Inventory</h3>
             <div className="flex items-center gap-3">
               <input
                 type="number"
                 min="1"
                 value={quantity}
-                onChange={e => setQuantity(Number(e.target.value))}
-                className="w-20 px-2 py-1 rounded text-black"
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                className="w-16 px-2 py-1 rounded text-black"
               />
               <button
                 onClick={handleAddToInventory}
                 disabled={adding || authLoading || !user}
-                className={`px-4 py-2 font-bold rounded text-white ${
-                  adding || authLoading || !user
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
+                className="disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {adding ? 'Adding…' : 'Add to Inventory'}
+                <img
+                  src="/assets/Addbut.png"
+                  alt="Add to Inventory"
+                  className="w-48 h-auto hover:opacity-80 transition duration-200"
+                />
               </button>
             </div>
             {message && (
-              <p className={`mt-2 text-sm ${message.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+              <p
+                className={`mt-2 text-sm ${
+                  message.type === 'success' ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
                 {message.text}
               </p>
             )}
             {!user && !authLoading && (
-              <p className="mt-2 text-yellow-400 text-sm">You must be logged in to add cards.</p>
+              <p className="mt-2 text-yellow-600 text-sm">You must be logged in to add cards.</p>
             )}
           </div>
 
           <div className="mt-6 flex gap-4">
-            <button onClick={() => router.back()} className="px-4 py-2 bg-pink-600 hover:bg-pink-700 rounded-full text-white">
-              Back
+            <button
+              onClick={() => (returnUrl ? router.push(returnUrl) : router.back())}
+              className="relative w-36 h-12 rounded-full overflow-hidden transition transform hover:scale-105"
+            >
+              <img
+                src="/assets/backbut.png"
+                alt="Back"
+                className="absolute inset-0 w-full h-full object-contain"
+              />
             </button>
+
             {card.prints_search_uri && (
               <button
                 onClick={() => router.push(`/card-prints?name=${encodeURIComponent(card.name)}`)}
-                className="px-4 py-2 bg-pink-600 hover:bg-pink-700 rounded-full text-white"
+                className="relative w-44 h-12 rounded-full overflow-hidden transition transform hover:scale-105"
               >
-                View Prints
+                <img
+                  src="/assets/viewprints.png"
+                  alt="View Prints"
+                  className="absolute inset-0 w-full h-full object-contain"
+                />
               </button>
             )}
           </div>
@@ -355,13 +414,19 @@ if (colors.length === 0) {
       </div>
 
       <style jsx>{`
-        .perspective-800 { perspective: 800px; }
-        .transform-style-preserve-3d { transform-style: preserve-3d; }
+        .perspective-800 {
+          perspective: 800px;
+        }
+        .transform-style-preserve-3d {
+          transform-style: preserve-3d;
+        }
         .backface-hidden {
           backface-visibility: hidden;
           -webkit-backface-visibility: hidden;
         }
-        .rotate-y-180 { transform: rotateY(180deg); }
+        .rotate-y-180 {
+          transform: rotateY(180deg);
+        }
       `}</style>
     </div>
   );

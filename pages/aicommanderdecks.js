@@ -78,58 +78,69 @@ export default function AICommanderDecks() {
   };
 
   return (
-    <div className="flex min-h-screen bg-midnight text-white relative">
-      {/* Sidebar */}
-      {showSidebar && (
-        <motion.div
-          initial={{ x: -300, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -300, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 100 }}
-          className="fixed top-0 left-0 h-full w-80 p-4 backdrop-blur-xl bg-gray-900/80 border-r border-white/20 rounded-tr-2xl rounded-br-2xl shadow-xl flex flex-col justify-between z-50"
-        >
-          <div>
-            <h2 className="text-xl font-bold text-neon-purple select-none mb-4">🧠 AI Assistant</h2>
-            <ul className="text-sm space-y-1 mb-4 select-none">
-              <li>✅ Suggests cards</li>
-              <li>⚠️ Warns of issues</li>
-              <li>💬 Explains synergy</li>
-            </ul>
+  <div className="flex min-h-screen bg-midnight text-white relative">
+    {/* Sidebar */}
+    {showSidebar && (
+      <motion.div
+        initial={{ x: -300, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: -300, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 100 }}
+        className="fixed left-0 top-1/2 transform -translate-y-1/2 w-80 p-0 bg-gray-900/80 border border-white/20 rounded-r-2xl shadow-xl flex flex-col justify-between z-50"
+      >
+        {/* Top row: AI Assistant + Hide */}
+        <div className="flex items-center justify-between mb-0">
+          <h2 className="text-xl font-bold text-neon-purple select-none">
+            🧠 AI Assistant
+          </h2>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="text-neon-pink hover:text-electric-blue px-0 py-1 rounded-lg"
+            onClick={toggleSidebar}
+            aria-label="Hide AI Sidebar"
+          >
+            HIDE
+          </Button>
+        </div>
 
-            <div className="flex-1 overflow-y-auto mb-4 rounded-lg p-2 bg-gray-800/70 border border-gray-700">
-              {chatLog.length === 0 ? (
-                <p className="text-gray-400 italic text-center select-none">No messages yet. Say hi!</p>
-              ) : (
-                chatLog.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`text-sm my-1 ${
-                      msg.role === 'user' ? 'text-glow-blue' : 'text-yellow-400'
-                    }`}
-                  >
-                    <span className="font-bold">{msg.role === 'user' ? 'You' : 'AI'}:</span> {msg.text}
-                  </div>
-                ))
-              )}
-            </div>
+        {/* Feature list */}
+        <ul className="text-sm space-y-1 mb-4 select-none">
+          <li>✅ Suggests cards</li>
+          <li>⚠️ Warns of issues</li>
+          <li>💬 Explains synergy</li>
+        </ul>
 
-            <ChatInput onSend={handleSendMessage} />
-          </div>
+        {/* Chat messages */}
+        <div className="flex-1 overflow-y-auto mb-4 rounded-lg p-0 bg-gray-800/70 border border-gray-700 max-h-64">
+          {chatLog.length === 0 ? (
+            <p className="text-gray-400 italic text-center select-none">
+              No messages yet. Say hi!
+            </p>
+          ) : (
+            chatLog.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`text-sm my-1 ${
+                  msg.role === 'user' ? 'text-glow-blue' : 'text-yellow-400'
+                }`}
+              >
+                <span className="font-bold ">
+                  {msg.role === 'user' ? 'You' : 'AI'}:
+                </span>{' '}
+                {msg.text}
+              </div>
+            ))
+          )}
+        </div>
 
-          <div className="pt-4">
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="text-neon-pink hover:text-electric-blue px-2 py-1 rounded-lg"
-              onClick={toggleSidebar}
-              aria-label="Hide AI Sidebar"
-            >
-              Hide
-            </Button>
-          </div>
-        </motion.div>
-      )}
+        {/* Chat input */}
+        
+        <ChatInput onSend={handleSendMessage} />
+      </motion.div>
+    )}
+
 
       {!showSidebar && (
         <Button
@@ -138,7 +149,7 @@ export default function AICommanderDecks() {
           className="fixed bottom-4 left-4 z-50 bg-neon-pink shadow-glow-blue hover:bg-electric-blue px-4 py-2 rounded-lg font-semibold transition-all duration-300"
           aria-label="Show AI Sidebar"
         >
-          Show AI Sidebar
+          AI Sidebar
         </Button>
       )}
 

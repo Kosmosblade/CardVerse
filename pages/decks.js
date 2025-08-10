@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Card from "../components/Card"; // Adjust path if needed
 import { createClient } from "@supabase/supabase-js";
 
@@ -25,6 +25,9 @@ export default function DeckBuilder() {
 
   // Get current user from Supabase auth
   const [user, setUser] = useState(null);
+
+  // inputRef for hidden file input
+  const inputRef = useRef(null);
 
   useEffect(() => {
     setDeckText("");
@@ -104,7 +107,6 @@ export default function DeckBuilder() {
   }
 
   async function fetchCardsData(deckList, commanderFromText) {
-    // Check deck size limit before proceeding:
     const totalCardsCount = deckList.reduce((acc, c) => acc + c.count, 0);
     if (totalCardsCount > MAX_DECK_SIZE) {
       setMessage(
@@ -138,7 +140,6 @@ export default function DeckBuilder() {
         console.log("Fetching card from Scryfall:", name);
 
         try {
-          // Use the local Next.js API proxy to avoid CORS
           const res = await fetch(`/api/scryfall?name=${encodeURIComponent(name)}`);
 
           if (!res.ok) {
@@ -170,7 +171,6 @@ export default function DeckBuilder() {
     setLogs(newLogs);
     setLoading(false);
 
-    // Try to validate commander from text (if provided)
     if (commanderFromText) {
       const cmdCard = dataMap[commanderFromText];
       if (cmdCard && cmdCard.type_line && /Legendary Creature/.test(cmdCard.type_line)) {
@@ -181,7 +181,6 @@ export default function DeckBuilder() {
       }
     }
 
-    // Otherwise, fallback to first Legendary Creature found in data
     const commanderCard = Object.values(dataMap).find(
       (c) => c && c.type_line && /Legendary Creature/.test(c.type_line)
     );
@@ -199,7 +198,6 @@ export default function DeckBuilder() {
     }
     const parsed = parseDeck(deckText);
 
-    // Check deck size limit here too and stop if exceeded
     const totalCardsCount = parsed.reduce((acc, c) => acc + c.count, 0);
     if (totalCardsCount > MAX_DECK_SIZE) {
       setMessage(
@@ -353,8 +351,8 @@ export default function DeckBuilder() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-gray-100 rounded-lg shadow-xl">
-      <h2 className="text-4xl font-extrabold mb-8 text-center text-indigo-700 drop-shadow-md">
+    <div className="max-w-7xl mx-auto p-6 bg-black text-white rounded-lg shadow-xl">
+      <h2 className="text-4xl font-extrabold mb-8 text-center text-black-900 drop-shadow-md">
         Deck Importer & Viewer
       </h2>
 
@@ -363,11 +361,12 @@ export default function DeckBuilder() {
         onChange={(e) => setDeckText(e.target.value)}
         placeholder="Paste your deck list here..."
         rows={8}
-        className="w-full p-4 border border-indigo-400 rounded-lg shadow-inner mb-6 font-mono text-lg resize-none focus:outline-none focus:ring-4 focus:ring-indigo-300"
+        className="w-full border-indigo-400 rounded-3g shadow-inner mb-6 font-mono text-lg resize-none focus:outline-none focus:ring-4 focus:ring-indigo-300"
         disabled={loading}
       />
 
       <div className="flex items-center gap-4 mb-6">
+        {/* Hidden file input */}
         <input
           type="file"
           accept=".txt"
@@ -383,15 +382,28 @@ export default function DeckBuilder() {
             };
             reader.readAsText(file);
           }}
-          className="flex-grow max-w-xs border border-indigo-400 rounded px-3 py-2 bg-black shadow-sm cursor-pointer"
+          ref={inputRef}
+          className="hidden"
           disabled={loading}
           title="Upload decklist text file"
         />
 
+        {/* Custom black button to open file dialog */}
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={loading}
+          className="bg-black text-white px-4 py-2 rounded shadow hover:bg-blacks-800 disabled:opacity-50"
+          title="Upload decklist text file"
+        >
+          Upload file
+        </button>
+
+        {/* Parse & Load Cards button */}
         <button
           onClick={handleParseClick}
           disabled={loading}
-          className={`flex-shrink-0 bg-indigo-700 text-white text-xl font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-800 transition duration-300 ${
+          className={`flex-shrink-0 bg-black-700 text-white text-xl font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-black-800 transition duration-300 ${
             loading ? "opacity-60 cursor-not-allowed" : ""
           }`}
         >
@@ -402,7 +414,10 @@ export default function DeckBuilder() {
       {/* Input fields for saving */}
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
         <div>
-          <label className="block mb-1 font-semibold text-indigo-700" htmlFor="deckTitle">
+          <label
+            className="block mb-0 font-semibold text-yellow-700 border-black-500 drop-shadow-md"
+            htmlFor="deckTitle"
+          >
             Deck Title
           </label>
           <input
@@ -411,13 +426,16 @@ export default function DeckBuilder() {
             value={deckTitle}
             onChange={(e) => setDeckTitle(e.target.value)}
             disabled={loading}
-            className="w-full px-3 py-2 rounded border border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full px-3 py-2 rounded-3g border-black-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             placeholder="Enter deck title"
           />
         </div>
 
         <div>
-          <label className="block mb-1 font-semibold text-indigo-700" htmlFor="commanderName">
+          <label
+            className="block mb-0 font-semibold text-yellow-700 border-black-500 drop-shadow-md"
+            htmlFor="commanderName"
+          >
             Commander Name
           </label>
           <input
@@ -426,13 +444,16 @@ export default function DeckBuilder() {
             value={commanderName}
             onChange={(e) => setCommanderName(e.target.value)}
             disabled={loading}
-            className="w-full px-3 py-2 rounded border border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full px-3 py-2 rounded-3g border-black-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             placeholder="Commander name"
           />
         </div>
 
         <div>
-          <label className="block mb-1 font-semibold text-indigo-700" htmlFor="colorIdentity">
+          <label
+            className="block mb-0 font-semibold text-yellow-700 border-black-500 drop-shadow-md"
+            htmlFor="colorIdentity"
+          >
             Color Identity
           </label>
           <input
@@ -441,13 +462,16 @@ export default function DeckBuilder() {
             value={colorIdentity}
             onChange={(e) => setColorIdentity(e.target.value)}
             disabled={loading}
-            className="w-full px-3 py-2 rounded border border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full px-3 py-2 rounded-3g border-black-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             placeholder="e.g. WUBRG"
           />
         </div>
 
         <div>
-          <label className="block mb-1 font-semibold text-indigo-700" htmlFor="mtgType">
+          <label
+            className="block mb-0 font-semibold text-yellow-700 border-black-500 drop-shadow-md"
+            htmlFor="mtgType"
+          >
             MTG Type
           </label>
           <input
@@ -456,7 +480,7 @@ export default function DeckBuilder() {
             value={mtgType}
             onChange={(e) => setMtgType(e.target.value)}
             disabled={loading}
-            className="w-full px-3 py-2 rounded border border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full px-3 py-2 rounded-3g border-black-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             placeholder="e.g. Commander, Core Set"
           />
         </div>
@@ -466,59 +490,60 @@ export default function DeckBuilder() {
         <button
           onClick={saveDeck}
           disabled={loading || deckList.length === 0}
-          className={`bg-green-600 text-black font-bold py-3 px-6 rounded shadow hover:bg-green-700 transition duration-300 ${
-            loading || deckList.length === 0 ? "opacity-60 cursor-not-allowed" : ""
+          className={`bg-transparent p-0 border-0 rounded shadow-none hover:opacity-90 transition duration-300 ${
+            loading || deckList.length === 0 ? "opacity-50 cursor-not-allowed" : ""
           }`}
           title="Save parsed deck to your Supabase collection"
         >
-          Save Deck
+          <img
+            src="/assets/savedeck.png"
+            alt="Save Deck"
+            className="w-auto h-14 pointer-events-none"
+          />
         </button>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setViewMode("grid")}
+              disabled={loading}
+              className={`px-1 py-2 rounded font-semibold transition ${
+                viewMode === "grid"
+                  ? "bg-black-700 text-yellow-700 border-black-500"
+                  : "bg-indigo-200 text-indigo-800 hover:bg-black-400"
+              }`}
+            >
+              Grid View
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              disabled={loading}
+              className={`px-4 py-2 rounded font-semibold transition ${
+                viewMode === "list" ? "bg-white-700 text-yellow-700" : "bg-indigo-200 text-indigo-800"
+              }`}
+            >
+              List View
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <button
-            onClick={() => setViewMode("grid")}
-            disabled={loading}
-            className={`mr-2 px-4 py-2 rounded font-semibold transition ${
-              viewMode === "grid"
-                ? "bg-indigo-700 text-black"
-                : "bg-indigo-200 text-indigo-800 hover:bg-indigo-400"
-            }`}
-          >
-            Grid View
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            disabled={loading}
-            className={`px-4 py-2 rounded font-semibold transition ${
-              viewMode === "list"
-                ? "bg-indigo-700 text-black"
-                : "bg-indigo-200 text-indigo-800 hover:bg-indigo-400"
-            }`}
-          >
-            List View
-          </button>
-        </div>
-
-        <div className="space-x-4">
-          <button
-            onClick={exportMTGA}
-            disabled={deckList.length === 0 || loading}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-black rounded shadow"
-            title="Export decklist for MTGA import"
-          >
-            Export MTGA
-          </button>
-          <button
-            onClick={exportMoxfield}
-            disabled={deckList.length === 0 || loading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-black rounded shadow"
-            title="Export decklist for Moxfield import"
-          >
-            Export Moxfield
-          </button>
-        </div>
+      <div className="space-y-4 mt-4 flex flex-col items-start">
+        <button
+          onClick={exportMTGA}
+          disabled={deckList.length === 0 || loading}
+          className="bg-black hover:bg-black-800 text-yellow-400 border border-black rounded px-4 py-2 shadow disabled:opacity-50"
+          title="Export decklist for MTGA import"
+        >
+          Export MTGA
+        </button>
+        <button
+          onClick={exportMoxfield}
+          disabled={deckList.length === 0 || loading}
+          className="bg-black hover:bg-black-800 text-yellow-400 border border-black rounded px-4 py-2 shadow disabled:opacity-50"
+          title="Export decklist for Moxfield import"
+        >
+          Export Moxfield
+        </button>
       </div>
 
       {message && (
@@ -536,13 +561,13 @@ export default function DeckBuilder() {
       )}
 
       {deckList.length === 0 ? (
-        <p className="mt-10 text-center text-gray-600 text-xl italic">No cards parsed yet.</p>
+        <p className="mt-10 text-center text-black-600 text-xl italic">No cards parsed yet.</p>
       ) : viewMode === "grid" ? (
         Object.entries(categories).map(
           ([category, cards]) =>
             cards.length > 0 && (
               <section key={category} className="mb-16">
-                <h3 className="text-3xl font-bold mb-6 border-b-4 border-indigo-500 pb-3 text-indigo-900 drop-shadow-md">
+                <h3 className="text-3xl font-bold mb-6 border-b-4 border-indigo-500 pb-3 text-black-900 drop-shadow-md">
                   {category} ({cards.reduce((a, c) => a + c.count, 0)})
                 </h3>
 
@@ -572,7 +597,7 @@ export default function DeckBuilder() {
                 <h4 className="text-2xl font-semibold mb-2 border-b-2 border-indigo-500">
                   {category} ({cards.reduce((acc, c) => acc + c.count, 0)})
                 </h4>
-                <pre className="whitespace-pre-wrap">
+                <pre className="space-pre-wrap">
                   {cards.map(({ count, name }) => `${count} ${name}`).join("\n")}
                 </pre>
               </div>

@@ -1,10 +1,13 @@
-// pages/advanced-search.js
-
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import SearchFilters from '../components/SearchFilters';
 import SearchResults from '../components/SearchResults';
 
+const STORAGE_KEY = 'advancedSearchState';
+
 export default function AdvancedSearch() {
+  const router = useRouter();
+
   const [filters, setFilters] = useState({
     name: '',
     set: '',
@@ -33,6 +36,75 @@ export default function AdvancedSearch() {
 
   const resultsRef = useRef(null);
 
+  // Restore state from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.filters) setFilters(parsed.filters);
+        if (parsed.results) setResults(parsed.results);
+        if (parsed.currentPage) setCurrentPage(parsed.currentPage);
+        if (parsed.hasMore !== undefined) setHasMore(parsed.hasMore);
+        if (parsed.nextPageUrl) setNextPageUrl(parsed.nextPageUrl);
+      }
+    } catch (e) {
+      console.warn('Failed to restore advanced search state:', e);
+    }
+  }, []);
+
+  // Save state to sessionStorage on changes
+  useEffect(() => {
+    try {
+      const stateToSave = {
+        filters,
+        results,
+        currentPage,
+        hasMore,
+        nextPageUrl,
+      };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (e) {
+      console.warn('Failed to save advanced search state:', e);
+    }
+  }, [filters, results, currentPage, hasMore, nextPageUrl]);
+
+  // Clear saved state on full page unload (refresh or tab close)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem(STORAGE_KEY);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  // Save state before route changes (e.g. when navigating to card detail)
+  useEffect(() => {
+    const handleRouteChangeStart = () => {
+      try {
+        const stateToSave = {
+          filters,
+          results,
+          currentPage,
+          hasMore,
+          nextPageUrl,
+        };
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+      } catch (e) {
+        console.warn('Failed to save advanced search state on route change:', e);
+      }
+    };
+
+    router.events.on('routeChangeStart', handleRouteChangeStart);
+
+    return () => {
+      router.events.off('routeChangeStart', handleRouteChangeStart);
+    };
+  }, [filters, results, currentPage, hasMore, nextPageUrl, router.events]);
+
   // Fetch sets on load
   useEffect(() => {
     async function fetchSets() {
@@ -47,7 +119,6 @@ export default function AdvancedSearch() {
         console.error('Failed to fetch sets:', err);
       }
     }
-
     fetchSets();
   }, []);
 
@@ -89,7 +160,9 @@ export default function AdvancedSearch() {
 
   const generatePageUrl = (pageNum) => {
     const query = buildQuery(filters).trim();
-    return `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards&order=name&page=${pageNum}`;
+    return `https://api.scryfall.com/cards/search?q=${encodeURIComponent(
+      query
+    )}&unique=cards&order=name&page=${pageNum}`;
   };
 
   const fetchCards = async (pageUrl = null) => {
@@ -149,17 +222,34 @@ export default function AdvancedSearch() {
   }, [results]);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto min-h-screen text-white">
-      <h1 className="text-2xl font-bold mb-4">Advanced Search</h1>
+    <div className="p-6 max-w-6xl mx-auto min-h-screen text-black">
+      <img
+        src="/assets/advancesearch.png"
+        alt="Advanced Search"
+        className="mb-1 w-1/2 max-w-md mx-auto"
+      />
 
       <form onSubmit={handleSubmit} className="flex flex-col">
         <SearchFilters filters={filters} onChange={handleFilterChange} sets={sets} />
+
         <button
           type="submit"
           disabled={loading}
-          className="mt-4 mb-8 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 self-start"
+          className="mt-4 mb-8 p-0 border-none bg-transparent self-start"
         >
-          {loading ? 'Searching...' : 'Search'}
+          {loading ? (
+            <img
+              src="/assets/searching...png"
+              alt="Searching"
+              className="w-32 h-auto animate-pulse transition"
+            />
+          ) : (
+            <img
+              src="/assets/search.png"
+              alt="Search"
+              className="w-32 h-auto hover:opacity-80 transition"
+            />
+          )}
         </button>
       </form>
 

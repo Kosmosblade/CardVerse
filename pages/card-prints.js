@@ -133,15 +133,20 @@ export default function CardPrints() {
         ))}
       </div>
 
-      <div className="mt-8 flex justify-center">
-        <button
-          onClick={() => router.back()}
-          className="px-6 py-2 bg-pink-600 text-white font-bold rounded-full shadow-lg hover:bg-pink-700 transition-all duration-300"
-          type="button"
-        >
-          Back
-        </button>
-      </div>
+      <div className="mt-10 flex justify-center">
+  <button
+    onClick={() => router.back()}
+    className="relative w-36 h-12 rounded-full overflow-hidden transition transform hover:scale-105 focus:outline-none"
+  >
+    <img
+      src="/assets/backbut.png"
+      alt="Back"
+      className="w-full h-full object-contain"
+      draggable={false}
+    />
+  </button>
+</div>
+
     </div>
   );
 }

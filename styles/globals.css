@@ -37,6 +37,14 @@ p, span, label, a {
   line-height: 1.6;
 }
 
+/* === GOLDEN GLOW UTILITY === */
+.text-arcane-gold {
+  color: #d4af37 !important;
+  text-shadow:
+    0 0 6px rgba(212, 175, 55, 0.8),
+    0 0 12px rgba(107, 33, 168, 0.6);
+}
+
 /* === LINKS === */
 a {
   color: #38bdf8; /* electric-blue */
@@ -98,26 +106,39 @@ select:focus {
   letter-spacing: 0.05em;
 }
 
-/* === CARD STYLE CONTAINERS === */
-.card-glow {
-  background-color: rgba(107, 33, 168, 0.15);
-  border: 1.5px solid rgba(167, 139, 250, 0.4);
-  box-shadow: 0 0 18px rgba(167, 139, 250, 0.6);
-  border-radius: 1.5rem;
-  padding: 1.5rem;
-  backdrop-filter: blur(10px);
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
-}
-.card-glow:hover {
-  box-shadow: 0 0 30px rgba(230, 195, 93, 0.9);
-  transform: scale(1.05);
+/* Improved bubble text clarity */
+.bubble.text-white {
+  color: #f3f3f3;
 }
 
-.card-hype {
-  @apply p-6 rounded-xl-2 shadow-xl transition duration-300;
-  background: linear-gradient(135deg, rgba(230, 195, 93, 0.12), rgba(107, 33, 168, 0.15));
-  border: 1.5px solid rgba(230, 195, 93, 0.3);
-  box-shadow: 0 0 22px rgba(230, 195, 93, 0.4);
+/* === CARD STYLE CONTAINERS === */
+
+/* Card container for proper tooltip overflow */
+.card-container {
+  position: relative;
+  overflow: visible !important;
+}
+
+/* Tooltip bubble for oracle text */
+.card-tooltip {
+  position: absolute;
+  z-index: 9999;
+  top: 100%;
+  left: 0;
+  margin-top: 0.25rem;
+  padding: 0.75rem 1rem;
+  width: 18rem; /* 288px */
+  max-width: 90vw;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  font-size: 0.875rem; /* text-sm */
+  border-radius: 0.5rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  pointer-events: none; /* don't block mouse */
+  user-select: text;
+  transition: opacity 0.3s ease;
 }
 
 /* === GLASS EFFECT === */

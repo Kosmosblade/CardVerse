@@ -1,6 +1,6 @@
 // File: pages/login.js
 import { useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/router';
 
 export default function Login() {
@@ -10,7 +10,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Check against HaveIBeenPwned leaked password database
   const isLeaked = async (password) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -45,14 +44,12 @@ export default function Login() {
       return;
     }
 
-    // Log the user in
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setMessage(error.message);
       setLoading(false);
     } else {
-      // Check if user profile exists
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -60,7 +57,6 @@ export default function Login() {
         .single();
 
       if (profileError || !profileData) {
-        // Create profile if missing
         const { error: insertProfileError } = await supabase
           .from('profiles')
           .insert([
@@ -101,14 +97,13 @@ export default function Login() {
       setMessage(`Logged in successfully. Card count: ${totalCardCount} / ${maxCardLimit}`);
       setLoading(false);
 
-      // Redirect after login
       router.push('/inventory');
     }
   };
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-[#0b1f3a] text-white rounded-lg shadow-md border border-blue-800">
-      <h2 className="text-2xl font-bold mb-4 text-blue-200">Log In</h2>
+      <h2 className="text-2xl text-center mb-4 style-romain font-bold text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">Log In</h2>
       <form onSubmit={handleLogin} className="flex flex-col gap-4">
         <input
           type="email"
@@ -130,22 +125,30 @@ export default function Login() {
           autoComplete="current-password"
           disabled={loading}
         />
-        <button
-          type="submit"
-          className={`relative flex items-center justify-center gap-2 py-2 rounded text-white transition 
-            ${loading ? 'bg-indigo-900 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-          disabled={loading}
-          aria-live="polite"
-        >
-          {loading && (
-            <span className="inline-block w-5 h-5 border-4 border-indigo-300 border-t-transparent rounded-full animate-spin"
-              aria-label="Loading spinner"
+
+        <div className="flex justify-center">
+          <button
+            type="submit"
+            disabled={loading}
+            className="relative w-40 h-12 rounded-full overflow-hidden transition transform hover:scale-105 focus:outline-none"
+            aria-label="Log In"
+          >
+            {loading && (
+              <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
+                <span className="inline-block w-5 h-5 border-4 border-indigo-300 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <img
+              src="/assets/login.png"
+              alt="Log In"
+              className="w-full h-full object-contain"
+              draggable={false}
             />
-          )}
-          Log In
-        </button>
+          </button>
+        </div>
+
         {message && (
-          <p className="text-sm text-red-400" role="alert" aria-live="assertive">
+          <p className="text-sm text-red-400 text-center" role="alert" aria-live="assertive">
             {message}
           </p>
         )}

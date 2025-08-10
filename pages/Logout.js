@@ -7,21 +7,17 @@ export default function Logout() {
   const [loggedOut, setLoggedOut] = useState(false);
 
   useEffect(() => {
-    // Create audio and prepare it
     const audio = new Audio('/sounds/logoutsoundlogout.mp3');
     audio.loop = true;
 
-    // Try to play audio and catch autoplay restrictions
     const playAudio = async () => {
       try {
         await audio.play();
       } catch {
-        // Autoplay failed (browser restriction)
-        // Could implement a user gesture trigger later
+        // Autoplay failed
       }
     };
 
-    // Perform logout, play audio, redirect after delay
     const doLogout = async () => {
       try {
         await supabase.auth.signOut();
@@ -33,7 +29,6 @@ export default function Logout() {
       } catch (error) {
         console.error('Logout error:', error);
         setLoggedOut(true);
-        // Redirect anyway after 2 seconds even if logout fails
         setTimeout(() => {
           router.push('/');
         }, 2000);
@@ -42,7 +37,6 @@ export default function Logout() {
 
     doLogout();
 
-    // Cleanup audio on unmount
     return () => {
       audio.pause();
       audio.currentTime = 0;
@@ -50,18 +44,42 @@ export default function Logout() {
   }, [router]);
 
   return (
-    <div
-      className="flex flex-col items-center justify-center min-h-screen bg-cover bg-center"
-      style={{ backgroundImage: `url('/images/enchanted-forest.jpg')` }}
-    >
-      {!loggedOut ? (
-        <>
-          <div className="spinner mb-4" aria-label="Loading spinner"></div>
-          <p className="text-xl text-gray-200 select-none">Logging out...</p>
-        </>
-      ) : (
-        <p className="text-xl text-gray-200 select-none">You have been logged out.</p>
-      )}
+    <>
+      <style jsx global>{`
+        /* Make sure root and body are full screen */
+        html, body, #__next {
+          margin: 0; padding: 0; height: 100%; width: 100%;
+          overflow: hidden;
+        }
+      `}</style>
+
+      <div className="fixed inset-0 z-0 w-screen h-screen bg-black overflow-hidden">
+        <img
+          src="/images/enchanted-forest.jpg"
+          alt="Background"
+          className="w-screen h-screen object-cover animate-fadeScale"
+          draggable={false}
+        />
+      </div>
+
+      {/* Overlay for text and spinner */}
+      <div className="fixed inset-0 z-10 flex flex-col items-center justify-center px-4">
+        {/* Optional translucent black overlay for better text contrast */}
+        <div className="absolute inset-0 bg-black opacity-60"></div>
+
+        {!loggedOut ? (
+          <>
+            <div className="spinner mb-4" aria-label="Loading spinner"></div>
+            <p className="relative text-xl text-white select-none drop-shadow-lg">
+              Logging out...
+            </p>
+          </>
+        ) : (
+          <p className="relative text-xl text-white select-none drop-shadow-lg">
+            You have been logged out.
+          </p>
+        )}
+      </div>
 
       <style jsx>{`
         .spinner {
@@ -79,7 +97,22 @@ export default function Logout() {
             transform: rotate(360deg);
           }
         }
+
+        @keyframes fadeScaleIn {
+          0% {
+            opacity: 0;
+            transform: scale(1.3);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-fadeScale {
+          animation: fadeScaleIn 2s ease forwards;
+        }
       `}</style>
-    </div>
+    </>
   );
 }
