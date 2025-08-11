@@ -1,7 +1,6 @@
 // src/components/CardCountDisplay.js
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
-
+import { supabase } from '../lib/supabase';
 export default function CardCountDisplay({ user, refreshTrigger }) {
   const [cardStats, setCardStats] = useState({ current: 0, limit: 0 });
   const [loading, setLoading] = useState(true);

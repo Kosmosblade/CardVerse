@@ -20,7 +20,7 @@ export default function CardDetail() {
   const [error, setError] = useState(null);
   const [flipped, setFlipped] = useState(false);
 
-  // Initialize authentication and listen to auth state changes
+  // Auth setup
   useEffect(() => {
     const initAuth = async () => {
       setAuthLoading(true);
@@ -43,7 +43,7 @@ export default function CardDetail() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Fetch card data when id changes
+  // Fetch card from Scryfall by id or name
   useEffect(() => {
     if (!id) return;
     const fetchCard = async () => {
@@ -68,10 +68,10 @@ export default function CardDetail() {
     fetchCard();
   }, [id]);
 
-  // Reset flip when card or print changes
+  // Reset flip on card change
   useEffect(() => setFlipped(false), [card, print]);
 
-  // Add to inventory handler
+  // Add to inventory
   const handleAddToInventory = async () => {
     if (quantity < 1) {
       setMessage({ type: 'error', text: 'Quantity must be at least 1' });
@@ -85,11 +85,69 @@ export default function CardDetail() {
     setMessage(null);
 
     try {
-      const name = print?.name || card.name;
-      const scryfall_id = print?.id || card.id;
+      const source = print || card;
+
+      const name = source.name;
+      const scryfall_id = source.id;
       const user_id = user.id;
 
-      // Check if card already exists for this user
+      // Get user profile username fallback to email
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user_id)
+        .single();
+      const username = profile?.username || user.email;
+
+      // Prepare colors array carefully
+      let colors = [];
+      if (Array.isArray(source.colors) && source.colors.length > 0) {
+        colors = source.colors;
+      } else if (Array.isArray(source.card_faces)) {
+        colors = [...new Set(source.card_faces.flatMap((face) => face.colors || []))];
+      }
+      if (colors.length === 0 && Array.isArray(source.color_identity) && source.color_identity.length > 0) {
+        colors = source.color_identity;
+      }
+      if (
+        colors.length === 0 &&
+        (source.mana_cost?.includes('{C}') ||
+          (source.type_line?.includes('Land') && !source.mana_cost) ||
+          (source.type_line?.includes('Artifact') && (!source.mana_cost || source.mana_cost === '{0}')))
+      ) {
+        colors = ['Colorless'];
+      }
+
+      // Gather images
+      const frontImage =
+        source.image_uris?.normal ||
+        source.card_faces?.[0]?.image_uris?.normal ||
+        'https://via.placeholder.com/223x310?text=No+Image';
+      const backImage = source.card_faces?.[1]?.image_uris?.normal || null;
+
+      const set_name = source.set_name || null;
+      const scryfall_uri = source.scryfall_uri || null;
+
+      const rawPrice = source.prices?.usd || null;
+      const price = rawPrice ? parseFloat(rawPrice) : 0;
+
+      // Compose type_line for double-faced cards
+      let type_line = '';
+      if (source.type_line) {
+        type_line = source.type_line;
+      } else if (source.card_faces?.length) {
+        type_line = source.card_faces.map((face) => face.type_line).filter(Boolean).join(' // ');
+      }
+
+      // Compose oracle_text for double-faced cards
+      let oracle_text = '';
+      if (source.oracle_text) {
+        oracle_text = source.oracle_text;
+      } else if (source.card_faces?.length) {
+        oracle_text = source.card_faces.map((face) => face.oracle_text).filter(Boolean).join('\n\n');
+      }
+
+      // Check if card exists in inventory
       const { data: existingCard, error: fetchError } = await supabase
         .from('inventory')
         .select('id, quantity')
@@ -100,62 +158,6 @@ export default function CardDetail() {
       if (fetchError && fetchError.code !== 'PGRST116') {
         throw fetchError;
       }
-
-      const frontImage =
-        print?.image_uris?.normal ||
-        print?.card_faces?.[0]?.image_uris?.normal ||
-        card.image_uris?.normal ||
-        card.card_faces?.[0]?.image_uris?.normal;
-
-      const backImage =
-        print?.card_faces?.[1]?.image_uris?.normal ||
-        card.card_faces?.[1]?.image_uris?.normal ||
-        null;
-
-      const set_name = print?.set_name || card.set_name;
-      const scryfall_uri = print?.scryfall_uri || card.scryfall_uri;
-      const rawPrice = print?.prices?.usd || card.prices?.usd;
-      const price = rawPrice ? parseFloat(rawPrice) : 0;
-
-      let colors = [];
-      const source = print || card;
-
-      if (Array.isArray(source.colors) && source.colors.length > 0) {
-        colors = source.colors;
-      } else if (Array.isArray(source.card_faces)) {
-        colors = [...new Set(source.card_faces.flatMap((face) => face.colors || []))];
-      }
-
-      if (colors.length === 0 && Array.isArray(source.color_identity) && source.color_identity.length > 0) {
-        colors = source.color_identity;
-      }
-
-      if (colors.length === 0) {
-        const manaCost = source.mana_cost || '';
-        const typeLine = source.type_line || '';
-
-        if (
-          manaCost.includes('{C}') ||
-          (typeLine.includes('Land') && manaCost === '') ||
-          (typeLine.includes('Artifact') && (manaCost === '' || manaCost === '{0}' || !manaCost))
-        ) {
-          colors = ['Colorless'];
-        }
-      }
-
-      let type_line = '';
-      if (source?.type_line) {
-        type_line = source.type_line;
-      } else if (source?.card_faces?.length) {
-        type_line = source.card_faces.map((face) => face.type_line).filter(Boolean).join(' // ');
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', user_id)
-        .single();
-      const username = profile?.username || user.email;
 
       if (existingCard) {
         const newQty = existingCard.quantity + quantity;
@@ -181,6 +183,9 @@ export default function CardDetail() {
               username,
               colors,
               type_line,
+              rarity: source.rarity || null,
+              cmc: source.cmc ?? null,
+              oracle_text,
             },
           ]);
         if (insertError) throw insertError;
@@ -238,9 +243,7 @@ export default function CardDetail() {
     'https://via.placeholder.com/223x310?text=No+Image';
 
   const backImage =
-    print?.card_faces?.[1]?.image_uris?.normal ||
-    card.card_faces?.[1]?.image_uris?.normal ||
-    null;
+    print?.card_faces?.[1]?.image_uris?.normal || card.card_faces?.[1]?.image_uris?.normal || null;
 
   const rawPrice = print?.prices?.usd || card.prices?.usd;
   const displayPrice = rawPrice ? `$${parseFloat(rawPrice).toFixed(2)}` : 'N/A';
@@ -299,7 +302,7 @@ export default function CardDetail() {
         <div className="flex-1 space-y-4">
           <h1 className="text-4xl font-extrabold">{card.name}</h1>
           <p className="text-sm text-blue-200">
-            {card.set_name} • {card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1)}
+            {card.set_name} • {card.rarity?.charAt(0).toUpperCase() + card.rarity?.slice(1)}
           </p>
           <p className="text-emerald-400 text-xl">Price: {displayPrice}</p>
 
@@ -349,7 +352,7 @@ export default function CardDetail() {
             </div>
           )}
 
-          <div className="mt-6 p-4 rounded text-black">
+          <div className="mt-6 p-4 rounded text-black bg-indigo-100 bg-opacity-20">
             <h3 className="text-lg font-semibold mb-2">Add to Inventory</h3>
             <div className="flex items-center gap-3">
               <input
@@ -363,6 +366,7 @@ export default function CardDetail() {
                 onClick={handleAddToInventory}
                 disabled={adding || authLoading || !user}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Add to Inventory"
               >
                 <img
                   src="/assets/Addbut.png"
@@ -389,6 +393,7 @@ export default function CardDetail() {
             <button
               onClick={() => (returnUrl ? router.push(returnUrl) : router.back())}
               className="relative w-36 h-12 rounded-full overflow-hidden transition transform hover:scale-105"
+              aria-label="Go Back"
             >
               <img
                 src="/assets/backbut.png"
@@ -401,6 +406,7 @@ export default function CardDetail() {
               <button
                 onClick={() => router.push(`/card-prints?name=${encodeURIComponent(card.name)}`)}
                 className="relative w-44 h-12 rounded-full overflow-hidden transition transform hover:scale-105"
+                aria-label="View Prints"
               >
                 <img
                   src="/assets/viewprints.png"

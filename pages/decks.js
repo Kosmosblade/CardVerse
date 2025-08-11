@@ -1,10 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import Card from "../components/Card"; // Adjust path if needed
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '../lib/supabase';  // adjust path if needed
 
 const MAX_DECK_SIZE = 100; // maximum allowed cards in deck
 
@@ -176,7 +172,12 @@ export default function DeckBuilder() {
       if (cmdCard && cmdCard.type_line && /Legendary Creature/.test(cmdCard.type_line)) {
         setCommanderName(cmdCard.name);
         setColorIdentity(cmdCard.color_identity?.join("") || "");
-        setMtgType(cmdCard.archetype || cmdCard.type_line || "");
+        // If user hasn't set mtgType, set it to Commander so inventory button can appear
+        if (!mtgType || mtgType.trim() === "") {
+          setMtgType("Commander");
+        } else {
+          setMtgType(cmdCard.archetype || cmdCard.type_line || mtgType);
+        }
         return;
       }
     }
@@ -187,7 +188,11 @@ export default function DeckBuilder() {
     if (commanderCard) {
       setCommanderName(commanderCard.name);
       setColorIdentity(commanderCard.color_identity?.join("") || "");
-      setMtgType(commanderCard.archetype || commanderCard.type_line || "");
+      if (!mtgType || mtgType.trim() === "") {
+        setMtgType("Commander");
+      } else {
+        setMtgType(commanderCard.archetype || commanderCard.type_line || mtgType);
+      }
     }
   }
 
@@ -216,6 +221,276 @@ export default function DeckBuilder() {
 
     fetchCardsData(parsed, commanderFromText);
   }
+
+  // robust Add Commander deck to Inventory (works with various column name schemas)
+  async function addToInventory() {
+  setMessage("");
+  setLogs([]);
+
+  if (!user) {
+    setMessage("You must be logged in to add to inventory.");
+    return;
+  }
+
+  const isCommander = (mtgType || "").toLowerCase().includes("commander") || !!commanderName;
+  if (!isCommander) {
+    setMessage("Inventory add is only available for Commander decks. Set MTG Type to 'Commander' or ensure a commander is detected.");
+    return;
+  }
+
+  if (deckList.length === 0) {
+    setMessage("No cards to add. Parse a deck first.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    // Build a name => count map
+    const nameCounts = {};
+    deckList.forEach(({ name, count }) => {
+      nameCounts[name] = (nameCounts[name] || 0) + count;
+    });
+    const names = Object.keys(nameCounts);
+
+    // Assuming you have user.id from auth
+const { data: profile, error: profileError } = await supabase
+  .from('profiles')
+  .select('username')
+  .eq('id', user.id)
+  .single();
+
+if (profileError) {
+  console.error('Error fetching profile username:', profileError);
+}
+
+const usernameVal = profile?.username || user.email || "unknown";
+
+    // Fetch a sample of inventory rows (no column assumptions)
+    const { data: allInv = [], error: fetchErr } = await supabase
+      .from("inventory")
+      .select("*")
+      .limit(1000);
+
+    if (fetchErr) {
+      throw fetchErr;
+    }
+
+    const sampleRow = allInv.length > 0 ? allInv[0] : null;
+    const sampleKeys = sampleRow ? Object.keys(sampleRow) : [];
+
+    // Helper to find actual column name from common candidates (case-insensitive)
+    function findKey(candidates) {
+      if (!sampleKeys || sampleKeys.length === 0) return null;
+      for (const cand of candidates) {
+        const found = sampleKeys.find((k) => k.toLowerCase() === cand.toLowerCase());
+        if (found) return found;
+      }
+      return null;
+    }
+
+    // Detect key names present in the table
+    const idKey = findKey(['id', 'inventory_id', 'row_id']) || 'id';
+    const nameKey = findKey(['card_name', 'cardname', 'name', 'card']) || null;
+    const quantityKey = findKey(['quantity', 'qty', 'count']) || 'quantity';
+    const userIdKey = findKey(['user_id', 'userid', 'owner_id']) || 'user_id';
+    const usernameKey = findKey(['username', 'user_name', 'user']) || 'username';
+    const priceKey = findKey(['price', 'usd_price', 'price_usd', 'card_price']) || 'price';
+    const typeLineKey = findKey(['type_line', 'typeline', 'type']) || 'type_line';
+    const colorsKey = findKey(['colors', 'color_identity', 'color', 'coloridentity']) || 'colors';
+    const rarityKey = findKey(['rarity']) || 'rarity';
+    const cmcKey = findKey(['cmc', 'converted_mana_cost']) || 'cmc';
+    const oracleKey = findKey(['oracle_text', 'oracletext', 'text', 'oracle']) || 'oracle_text';
+    const sourceKey = findKey(['source']) || 'source';
+
+
+
+    // Build map of existing rows for this user (keyed by normalized card name)
+    let existingForUser = [];
+
+    if (allInv.length > 0) {
+      // Check if userIdKey or usernameKey present for filtering existing rows
+      const uidPresent = sampleKeys.map(k => k.toLowerCase()).includes(userIdKey.toLowerCase());
+      const unamePresent = sampleKeys.map(k => k.toLowerCase()).includes(usernameKey.toLowerCase());
+
+      if (uidPresent) {
+        existingForUser = allInv.filter(r => {
+          try {
+            return String(r[userIdKey]) === String(user.id);
+          } catch (e) {
+            return false;
+          }
+        });
+      } else if (unamePresent) {
+        existingForUser = allInv.filter(r => {
+          try {
+            return String(r[usernameKey]) === String(usernameVal);
+          } catch (e) {
+            return false;
+          }
+        });
+      } else {
+        // Fallback: rows with matching card names
+        existingForUser = allInv.filter(r => {
+          const candidateName = (r[nameKey] || r['name'] || r['card_name'] || r['cardname'] || r['card']);
+          if (!candidateName) return false;
+          return names.includes(String(candidateName));
+        });
+      }
+    }
+
+    // Create map of existing rows keyed by lowercase card name for quick lookup
+    const existingMap = {};
+    existingForUser.forEach(row => {
+      const cardName = (row[nameKey] || row['name'] || row['card_name'] || row['cardname'] || row['card']);
+      if (cardName) {
+        existingMap[cardName.toLowerCase()] = row;
+      }
+    });
+
+    // Arrays to hold insert and update payloads
+    const inserts = [];
+    const updates = [];
+
+    // Build insert/update payloads using detected column names
+   // At the top: find keys (keep your existing keys)
+const imageUrlKey = findKey(['image_url', 'imageurl', 'image']) || 'image_url';
+const backImageUrlKey = findKey(['back_image_url', 'backimageurl', 'backimage']) || 'back_image_url';
+const setNameKey = findKey(['set_name', 'setname', 'set']) || 'set_name';
+const scryfallUriKey = findKey(['scryfall_uri', 'scryfalluri', 'scryfall']) || 'scryfall_uri';
+const scryfallIdKey = findKey(['scryfall_id', 'scryfallid', 'scryfall']) || 'scryfall_id';
+
+// Loop over card names (your existing for loop)
+for (const n of names) {
+  const countToAdd = nameCounts[n];
+  const cardObj = cardsData[n] || null;
+
+  if (!cardObj) continue; // skip if no data
+
+  // === FIX: build colorsArray with colorless detection ===
+  let colorsArray = [];
+  if (cardObj.color_identity && cardObj.color_identity.length > 0) {
+    colorsArray = cardObj.color_identity;
+  } else if (cardObj.colors && cardObj.colors.length > 0) {
+    colorsArray = cardObj.colors;
+  } else {
+    // Detect colorless cards explicitly:
+    const manaCost = cardObj.mana_cost || '';
+    const typeLine = cardObj.type_line || '';
+
+    if (
+      manaCost.includes('{C}') ||
+      (typeLine.includes('Land') && manaCost === '') ||
+      (typeLine.includes('Artifact') && (manaCost === '' || manaCost === '{0}' || manaCost == null))
+    ) {
+      colorsArray = ['Colorless'];
+    }
+  }
+
+  // Now gather other card fields
+  const price = cardObj.prices?.usd ?? null;
+  const type_line = cardObj.type_line ?? null;
+  const rarity = cardObj.rarity ?? null;
+  const cmc = cardObj.cmc ?? null;
+  const oracle_text = cardObj.oracle_text ?? null;
+
+  const image_url = cardObj.image_uris?.normal ?? null;
+  const back_image_url = cardObj.card_faces && cardObj.card_faces[1]?.image_uris?.normal
+    ? cardObj.card_faces[1].image_uris.normal
+    : null;
+  const set_name = cardObj.set_name ?? null;
+  const scryfall_uri = cardObj.scryfall_uri ?? null;
+  const scryfall_id = cardObj.id ?? null;
+
+  const existingRow = existingMap[n.toLowerCase()];
+
+  if (existingRow) {
+    // Prepare update payload
+    const payload = {};
+    payload[quantityKey] = (existingRow[quantityKey] || existingRow['quantity'] || 0) + countToAdd;
+    if (priceKey) payload[priceKey] = price;
+    if (typeLineKey) payload[typeLineKey] = type_line;
+    if (colorsKey) payload[colorsKey] = colorsArray.length > 0 ? colorsArray : null;
+    if (rarityKey) payload[rarityKey] = rarity;
+    if (cmcKey) payload[cmcKey] = cmc;
+    if (oracleKey) payload[oracleKey] = oracle_text;
+    if (usernameKey) payload[usernameKey] = usernameVal;
+    if (imageUrlKey) payload[imageUrlKey] = image_url;
+    if (backImageUrlKey) payload[backImageUrlKey] = back_image_url;
+    if (setNameKey) payload[setNameKey] = set_name;
+    if (scryfallUriKey) payload[scryfallUriKey] = scryfall_uri;
+    if (scryfallIdKey) payload[scryfallIdKey] = scryfall_id;
+
+    updates.push({
+      idValue: existingRow[idKey] ?? existingRow['id'],
+      payload,
+    });
+  } else {
+    // Prepare insert payload
+    const payload = {};
+    if (userIdKey) payload[userIdKey] = user.id;
+    if (usernameKey) payload[usernameKey] = usernameVal;
+    if (nameKey) payload[nameKey] = n;
+    else payload['card_name'] = n;
+    payload[quantityKey] = countToAdd;
+    if (priceKey) payload[priceKey] = price;
+    if (typeLineKey) payload[typeLineKey] = type_line;
+    if (colorsKey) payload[colorsKey] = colorsArray.length > 0 ? colorsArray : null;
+    if (rarityKey) payload[rarityKey] = rarity;
+    if (cmcKey) payload[cmcKey] = cmc;
+    if (oracleKey) payload[oracleKey] = oracle_text;
+    if (imageUrlKey) payload[imageUrlKey] = image_url;
+    if (backImageUrlKey) payload[backImageUrlKey] = back_image_url;
+    if (setNameKey) payload[setNameKey] = set_name;
+    if (scryfallUriKey) payload[scryfallUriKey] = scryfall_uri;
+    if (scryfallIdKey) payload[scryfallIdKey] = scryfall_id;
+
+    inserts.push(payload);
+  }
+}
+
+
+
+    // Now perform updates
+    for (const upd of updates) {
+      const { idValue, payload } = upd;
+      const { data, error } = await supabase
+        .from("inventory")
+        .update(payload)
+        .eq(idKey, idValue);
+
+      if (error) {
+        console.error("Error updating inventory:", error);
+        setLogs((logs) => [...logs, `Update error for id ${idValue}: ${error.message}`]);
+      } else {
+        setLogs((logs) => [...logs, `Updated card id ${idValue} quantity to ${payload[quantityKey]}`]);
+      }
+    }
+
+    // Perform inserts
+    if (inserts.length > 0) {
+      const { data, error } = await supabase
+        .from("inventory")
+        .insert(inserts);
+
+      if (error) {
+        console.error("Error inserting into inventory:", error);
+        setLogs((logs) => [...logs, `Insert error: ${error.message}`]);
+        throw error;
+      } else {
+        setLogs((logs) => [...logs, `Inserted ${inserts.length} new cards into inventory.`]);
+      }
+    }
+
+    setMessage("Inventory updated successfully.");
+  } catch (e) {
+    console.error("Error adding to inventory:", e);
+    setMessage(`Error adding to inventory: ${e.message || e}`);
+  } finally {
+    setLoading(false);
+  }
+}
+
 
   function categorizeCards() {
     const categories = {
@@ -501,6 +776,24 @@ export default function DeckBuilder() {
             className="w-auto h-14 pointer-events-none"
           />
         </button>
+
+        {/* Add to Inventory button: appears when a Commander is detected or MTG Type includes "Commander" */}
+        {(deckList.length > 0 && ((mtgType || "").toLowerCase().includes("commander") || commanderName)) && (
+          <button
+            onClick={addToInventory}
+            disabled={loading || deckList.length === 0}
+            title="Add parsed deck cards to your inventory (Commander decks only)"
+            className="ml-4 p-0 border-0 bg-transparent"
+          >
+            <img
+              src="/assets/Addbut.png"
+              alt="Add to Inventory"
+              className="w-auto h-14 pointer-events-none"
+              style={{ display: "inline-block" }}
+            />
+          </button>
+        )}
+
         <div className="flex justify-between items-center mb-6">
           <div className="flex space-x-2">
             <button

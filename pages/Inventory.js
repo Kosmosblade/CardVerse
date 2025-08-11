@@ -10,14 +10,14 @@ import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import CardCountDisplay from '../components/CardCountDisplay';
 
-// Added Colorless with code 'C'
+// Added Colorless with label 'Colorless'
 const colorOptions = [
   { code: 'W', label: 'White' },
   { code: 'U', label: 'Blue' },
   { code: 'B', label: 'Black' },
   { code: 'R', label: 'Red' },
   { code: 'G', label: 'Green' },
-  { code: 'Colorless', label: 'Colorless' }, // Added Colorless
+  { code: 'Colorless', label: 'Colorless' },
 ];
 
 const CardItem = memo(
@@ -48,6 +48,7 @@ const CardItem = memo(
           }}
           className="absolute top-2 right-2 z-30 bg-red-700 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
           type="button"
+          aria-label={`Delete one ${card.name}`}
         >
           ❌
         </button>
@@ -59,17 +60,23 @@ const CardItem = memo(
             }}
             className="absolute top-2 left-2 z-20 bg-gray-800 bg-opacity-75 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
             type="button"
+            aria-label={`Flip ${card.name}`}
           >
             🔁
           </button>
         )}
         <img
           src={displayedImage}
-          alt={card.name}
+          alt={card.name || 'Card image'}
           className="w-full h-full object-cover"
           onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = '/placeholder.jpg';
+            // defensive check - some browsers type for event target is any
+            try {
+              e.target.onerror = null;
+              e.target.src = '/placeholder.jpg';
+            } catch (err) {
+              /* ignore */
+            }
           }}
           draggable={false}
         />
@@ -100,6 +107,7 @@ export default function Inventory() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showFilters, setShowFilters] = useState(true);
   const router = useRouter();
+  const mountedRef = useRef(true);
 
   // --- filter state ---
   const [fName, setFName] = useState('');
@@ -111,9 +119,28 @@ export default function Inventory() {
   const [fTypes, setFTypes] = useState([]);
   const [fColors, setFColors] = useState([]);
 
-  // load user
+  // cleanup mounted ref
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // load user once
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (!cancelled) setUser(data?.user || null);
+      } catch (err) {
+        console.error('Error loading user', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // fetch inventory with filters applied server-side
@@ -121,79 +148,94 @@ export default function Inventory() {
     if (!user) return;
     setLoading(true);
 
-    let query = supabase
-      .from('inventory')
-      .select(
-        'id, name, quantity, price, image_url, back_image_url, set_name, scryfall_uri, scryfall_id, type_line, colors'
-      )
-      .eq('user_id', user.id);
+    try {
+      let query = supabase
+        .from('inventory')
+        .select(
+  'id, name, quantity, price, image_url, back_image_url, set_name, scryfall_uri, scryfall_id, type_line, colors, rarity, cmc, oracle_text, created_at'
+)
+        .eq('user_id', user.id);
 
-    // filters
-    if (fName.trim() !== '') {
-      query = query.ilike('name', `%${fName.trim()}%`);
-    }
-    if (fSet !== '') {
-      query = query.eq('set_name', fSet);
-    }
-    if (fMinQty !== '') {
-      const minQty = parseInt(fMinQty, 10);
-      if (!isNaN(minQty)) query = query.gte('quantity', minQty);
-    }
-    if (fMaxQty !== '') {
-      const maxQty = parseInt(fMaxQty, 10);
-      if (!isNaN(maxQty)) query = query.lte('quantity', maxQty);
-    }
-    if (fMinPrice !== '') {
-      const minPrice = parseFloat(fMinPrice);
-      if (!isNaN(minPrice)) query = query.gte('price', minPrice);
-    }
-    if (fMaxPrice !== '') {
-      const maxPrice = parseFloat(fMaxPrice);
-      if (!isNaN(maxPrice)) query = query.lte('price', maxPrice);
-    }
-    if (fColors.length > 0) {
-      // filter cards that contain ALL selected colors (codes like 'W', 'C', etc)
-      fColors.forEach((color) => {
-        query = query.contains('colors', [color]);
+      // filters
+      if (fName.trim() !== '') {
+        query = query.ilike('name', `%${fName.trim()}%`);
+      }
+      if (fSet !== '') {
+        query = query.eq('set_name', fSet);
+      }
+      if (fMinQty !== '') {
+        const minQty = parseInt(fMinQty, 10);
+        if (!isNaN(minQty)) query = query.gte('quantity', minQty);
+      }
+      if (fMaxQty !== '') {
+        const maxQty = parseInt(fMaxQty, 10);
+        if (!isNaN(maxQty)) query = query.lte('quantity', maxQty);
+      }
+      if (fMinPrice !== '') {
+        const minPrice = parseFloat(fMinPrice);
+        if (!isNaN(minPrice)) query = query.gte('price', minPrice);
+      }
+      if (fMaxPrice !== '') {
+        const maxPrice = parseFloat(fMaxPrice);
+        if (!isNaN(maxPrice)) query = query.lte('price', maxPrice);
+      }
+      if (fColors.length > 0) {
+        // filter cards that contain ALL selected colors (codes like 'W', 'Colorless', etc)
+        fColors.forEach((color) => {
+          query = query.contains('colors', [color]);
+        });
+      }
+
+      // Pagination and ordering
+      query = query
+        .range((currentPage - 1) * pageSize, currentPage * pageSize - 1)
+        .order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error loading inventory:', error);
+        if (mountedRef.current) {
+          setInventory([]);
+          setSelectedCard(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // client side filter for types (because supabase doesn't support OR for multiple values easily)
+      let filteredData = data || [];
+      if (fTypes.length > 0) {
+        filteredData = filteredData.filter((card) =>
+          fTypes.some((type) =>
+            card.type_line?.toLowerCase().includes(type.toLowerCase())
+          )
+        );
+      }
+
+      if (!mountedRef.current) return;
+
+      setInventory(filteredData);
+
+      // setSelectedCard using functional update to avoid dependency loops
+      setSelectedCard((prev) => {
+        if (!prev && filteredData.length) return filteredData[0];
+        if (prev && !filteredData.find((c) => c.id === prev.id)) return null;
+        return prev;
       });
+    } catch (err) {
+      console.error('Unexpected error fetching inventory:', err);
+      if (mountedRef.current) {
+        setInventory([]);
+        setSelectedCard(null);
+      }
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
-
-    // Pagination and ordering
-    query = query
-      .range((currentPage - 1) * pageSize, currentPage * pageSize - 1)
-      .order('created_at', { ascending: false });
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error loading inventory:', error);
-      setInventory([]);
-      setSelectedCard(null);
-      setLoading(false);
-      return;
-    }
-
-    // client side filter for types (because supabase doesn't support OR for multiple values easily)
-    let filteredData = data || [];
-    if (fTypes.length > 0) {
-      filteredData = filteredData.filter((card) =>
-        fTypes.some((type) =>
-          card.type_line?.toLowerCase().includes(type.toLowerCase())
-        )
-      );
-    }
-
-    setInventory(filteredData);
-    if (!selectedCard && filteredData.length) setSelectedCard(filteredData[0]);
-    else if (selectedCard && !filteredData.find((c) => c.id === selectedCard.id)) {
-      setSelectedCard(null);
-    }
-    setLoading(false);
   }, [
     user,
     currentPage,
     refreshTrigger,
-    selectedCard,
     fName,
     fSet,
     fMinQty,
@@ -206,66 +248,91 @@ export default function Inventory() {
 
   useEffect(() => {
     fetchInventory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchInventory]);
 
- const handleAdd = useCallback(
+  const handleAdd = useCallback(
   async (e) => {
     e.preventDefault();
     if (!cardName.trim() || !user) return;
     const qty = parseInt(quantity, 10);
-    if (qty < 1) return alert('Quantity ≥ 1');
+    if (isNaN(qty) || qty < 1) return alert('Quantity must be at least 1');
+    setLoading(true);
+
     try {
+      // fetch from Scryfall
       const res = await fetch(
         `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(
           cardName.trim()
         )}`
       );
       const r = await res.json();
-      if (r.object === 'error') return alert('Card not found');
+      if (r.object === 'error') {
+        alert('Card not found');
+        return;
+      }
 
-      // Fix colors extraction — ensure it's always an array of strings or empty array
+      // build colors array from card or faces
       let cardColors = [];
       if (Array.isArray(r.colors)) {
         cardColors = r.colors;
-      } else if (r.card_faces && Array.isArray(r.card_faces)) {
-        // Combine colors from all faces (if multiface)
+      } else if (Array.isArray(r.card_faces)) {
         cardColors = r.card_faces.reduce((acc, face) => {
           if (Array.isArray(face.colors)) acc.push(...face.colors);
           return acc;
         }, []);
-        // Remove duplicates
         cardColors = [...new Set(cardColors)];
       }
 
-      // Add "Colorless" if no colors and mana cost includes {C} or land with no mana cost
       if (
-  cardColors.length === 0 &&
-  (
-    r.mana_cost?.includes('{C}') || 
-    (r.type_line?.includes('Land') && r.type_line?.includes('Artifact') && !r.mana_cost) ||
-    (r.type_line?.includes('Artifact') && (!r.mana_cost || r.mana_cost === '' || r.mana_cost === '{0}'))
-  )
-) {
-  cardColors = ['Colorless'];  // FULL word here, NOT 'C'
-}
+        cardColors.length === 0 &&
+        (r.mana_cost?.includes('{C}') ||
+          (r.type_line?.toLowerCase().includes('land') && !r.mana_cost) ||
+          (r.type_line?.toLowerCase().includes('artifact') &&
+            (!r.mana_cost || r.mana_cost === '' || r.mana_cost === '{0}')))
+      ) {
+        cardColors = ['Colorless'];
+      }
 
-const image_url =
-  r.image_uris?.normal ||
-  r.card_faces?.[0]?.image_uris?.normal ||
-  '';
+      const image_url =
+        r.image_uris?.normal || r.card_faces?.[0]?.image_uris?.normal || '';
+      const back_image_url = r.card_faces?.[1]?.image_uris?.normal || '';
 
-const back_image_url = r.card_faces?.[1]?.image_uris?.normal || '';
+      // optional username fetch (keep as-is)
+      let username = null;
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        if (!profileError) username = profile?.username || null;
+      } catch (errProfile) {
+        // ignore
+      }
 
-      // Fetch username for logged in user
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', user.id)
-        .single();
+      // build payload (single source of truth)
+      const payload = {
+        name: r.name,
+        user_id: user.id,
+        username,
+        price: parseFloat(r.prices?.usd) || 0,
+        image_url,
+        back_image_url,
+        set_name: r.set_name,
+        scryfall_uri: r.scryfall_uri,
+        scryfall_id: r.id,
+        type_line: r.type_line || '',
+        colors: cardColors,
+        rarity: r.rarity || (r.card_faces?.[0]?.rarity ?? '') || '',
+        cmc: r.cmc ?? (r.card_faces?.[0]?.cmc ?? null),
+        oracle_text: r.oracle_text || (r.card_faces?.[0]?.oracle_text ?? '') || '',
+      };
 
-      const username = profile?.username || null;
+      // LOG the payload so you can inspect it in console
+      console.log('Inventory payload:', payload);
 
-      // Check if card already exists for this user in inventory
+      // check if card already exists for this user
       const { data: existingCard, error: fetchError } = await supabase
         .from('inventory')
         .select('id, quantity')
@@ -274,64 +341,60 @@ const back_image_url = r.card_faces?.[1]?.image_uris?.normal || '';
         .single();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
-        // PGRST116 = no rows found, so safe to proceed
         console.error('Error checking existing card:', fetchError);
-        alert('Failed to add card');
+        alert('Failed to add card (check console)');
         return;
       }
 
       if (existingCard) {
-        // Card exists, update quantity by adding
+        // update — merge quantity
         const newQty = existingCard.quantity + qty;
-        const { error: updateError } = await supabase
+        const updatePayload = { ...payload, quantity: newQty };
+
+        const { data: updateData, error: updateError } = await supabase
           .from('inventory')
-          .update({ quantity: newQty })
-          .eq('id', existingCard.id);
+          .update(updatePayload)
+          .eq('id', existingCard.id)
+          .select(); // returns updated row(s)
+
+        console.log('Update response:', updateData, updateError);
 
         if (updateError) {
-          console.error('Error updating quantity:', updateError);
-          alert('Failed to update card quantity');
+          console.error('Error updating existing card:', updateError);
+          alert('Failed to update card (check console)');
           return;
         }
       } else {
-        // Card does not exist, insert new with username and colors
-        const { error: insertError } = await supabase.from('inventory').insert([
-          {
-            name: r.name,
-            quantity: qty,
-            user_id: user.id,
-            username,           // <-- Add username here
-            price: parseFloat(r.prices?.usd) || 0,
-            image_url,
-            back_image_url,
-            set_name: r.set_name,
-            scryfall_uri: r.scryfall_uri,
-            scryfall_id: r.id,
-            type_line: r.type_line || '',
-            colors: cardColors, // colorless fix applied here
-          },
-        ]);
+        // insert new
+        const insertPayload = { ...payload, quantity: qty };
+
+        const { data: insertData, error: insertError } = await supabase
+          .from('inventory')
+          .insert([insertPayload], { returning: 'representation' });
+
+        console.log('Insert response:', insertData, insertError);
 
         if (insertError) {
           console.error('Error inserting new card:', insertError);
-          alert('Failed to add card');
+          alert('Failed to add card (check console)');
           return;
         }
       }
 
+      // success - clear form & refresh
       setCardName('');
       setQuantity(1);
       setRefreshTrigger((p) => p + 1);
     } catch (err) {
-      console.error(err);
-      alert('Failed to add card');
+      console.error('Unhandled error in handleAdd:', err);
+      alert('Failed to add card (see console)');
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
   },
   [cardName, quantity, user]
 );
 
-  // delete card
-  // Inside Inventory function component, add:
 
 const handleClick = useCallback(
   (card) => {
@@ -346,16 +409,18 @@ const handleClick = useCallback(
 
 const handleDelete = useCallback(
   async (id) => {
+    if (!id) return;
+    setLoading(true);
     try {
       const { data: card, error: fetchError } = await supabase
         .from('inventory')
-        .select('quantity')
+        .select('id, quantity')
         .eq('id', id)
         .single();
 
       if (fetchError) {
         console.error('Error fetching card quantity:', fetchError);
-        alert('Failed to delete card');
+        alert('Failed to delete card (check console)');
         return;
       }
 
@@ -365,10 +430,14 @@ const handleDelete = useCallback(
       }
 
       if (card.quantity > 1) {
-        const { error: updateError } = await supabase
+        const newQty = card.quantity - 1;
+        const { data: updateData, error: updateError } = await supabase
           .from('inventory')
-          .update({ quantity: card.quantity - 1 })
-          .eq('id', id);
+          .update({ quantity: newQty })
+          .eq('id', id)
+          .select();
+
+        console.log('Delete(decrement) update:', updateData, updateError);
 
         if (updateError) {
           console.error('Error updating quantity:', updateError);
@@ -376,10 +445,13 @@ const handleDelete = useCallback(
           return;
         }
       } else {
-        const { error: deleteError } = await supabase
+        const { data: deleteData, error: deleteError } = await supabase
           .from('inventory')
           .delete()
-          .eq('id', id);
+          .eq('id', id)
+          .select();
+
+        console.log('Delete row response:', deleteData, deleteError);
 
         if (deleteError) {
           console.error('Error deleting card:', deleteError);
@@ -391,11 +463,14 @@ const handleDelete = useCallback(
       setRefreshTrigger((p) => p + 1);
     } catch (err) {
       console.error('Unexpected error deleting card:', err);
-      alert('Failed to delete card');
+      alert('Failed to delete card (see console)');
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
   },
   []
 );
+
 
 const handleHover = useCallback((card) => {
   setHoveredCard(card);
@@ -406,46 +481,47 @@ const handleFlip = useCallback((id) => {
   setFlippedCards((p) => ({ ...p, [id]: !p[id] }));
 }, []);
 
+// pagination
+const handleNext = () => {
+  if (inventory.length === pageSize) setCurrentPage((p) => p + 1);
+};
+const handlePrev = () => setCurrentPage((p) => (p > 1 ? p - 1 : 1));
 
-  // pagination
-  const handleNext = () => {
-    if (inventory.length === pageSize) setCurrentPage((p) => p + 1);
-  };
-  const handlePrev = () => setCurrentPage((p) => (p > 1 ? p - 1 : 1));
+// reset filters
+const resetAll = () => {
+  setFName('');
+  setFSet('');
+  setFMinQty('');
+  setFMaxQty('');
+  setFMinPrice('');
+  setFMaxPrice('');
+  setFTypes([]);
+  setFColors([]);
+  setCurrentPage(1);
+};
 
-  // reset filters
-  const resetAll = () => {
-    setFName('');
-    setFSet('');
-    setFMinQty('');
-    setFMaxQty('');
-    setFMinPrice('');
-    setFMaxPrice('');
-    setFTypes([]);
-    setFColors([]);
-    setCurrentPage(1);
-  };
 
   // grid items
   const inventoryGrid = useMemo(
-  () =>
-    inventory.map((c) => (
-      <CardItem
-        key={c.id}
-        card={c}
-        onClick={handleClick}
-        onDelete={handleDelete}
-        flipped={flippedCards[c.id]}
-        onFlip={handleFlip}
-        onHover={handleHover}
-      />
-    )),
-  [inventory, flippedCards, handleClick, handleDelete, handleFlip, handleHover]
-);
+    () =>
+      inventory.map((c) => (
+        <CardItem
+          key={c.id}
+          card={c}
+          onClick={handleClick}
+          onDelete={handleDelete}
+          flipped={!!flippedCards[c.id]}
+          onFlip={handleFlip}
+          onHover={handleHover}
+        />
+      )),
+    [inventory, flippedCards, handleClick, handleDelete, handleFlip, handleHover]
+  );
 
   // unique sets/types for filters
   const uniqueSets = useMemo(
-    () => Array.from(new Set(inventory.map((c) => c.set_name))).sort(),
+    () =>
+      Array.from(new Set(inventory.map((c) => c.set_name).filter(Boolean))).sort(),
     [inventory]
   );
 
@@ -467,7 +543,7 @@ const handleFlip = useCallback((id) => {
         .filter(Boolean);
 
       parts.forEach((part) => {
-        // Ignore very long or malformed parts like "Angel;;;;;;;;;;"
+        // Ignore very long or malformed parts
         if (part.length > 0 && part.length < 30) {
           typeSet.add(part);
         }
@@ -477,306 +553,301 @@ const handleFlip = useCallback((id) => {
     return Array.from(typeSet).sort();
   }, [inventory]);
 
+  // memoized CardCountDisplay to reduce re-renders
+  const cardCountWidget = useMemo(
+    () => <CardCountDisplay user={user} refreshTrigger={refreshTrigger} />,
+    [user, refreshTrigger]
+  );
+
   return (
-  <div className="min-h-screen bg-cover bg-center text-black p-6">
+    <div className="min-h-screen bg-cover bg-center text-black p-6">
+      <main className="flex min-h-screen w-full p-6 bg-transparent items-start justify-start gap-6">
+        <div className="w-full flex flex-col md:flex-row md:items-start gap-1">
+          {/* LEFT COLUMN - PREVIEW & CARD COUNT */}
+          <div className="w-full md:w-1/4 md:text-left text-left img-left">
+            <h1 className="text-xl font-bold text-white-300 mb-4">Card Preview</h1>
 
+            {(hoveredCard || selectedCard) && (
+              <>
+                <img
+                  src={(hoveredCard || selectedCard).image_url || '/placeholder.jpg'}
+                  alt={(hoveredCard || selectedCard).name || 'Card preview'}
+                  className="w-full h-auto object-contain rounded mb-2"
+                />
+                <div className="text-xs space-y-1">
+                  <p className="font-bold">{(hoveredCard || selectedCard).name}</p>
+                  <p>
+                    Price:{' '}
+                    {(hoveredCard || selectedCard).price > 0
+                      ? `$${(hoveredCard || selectedCard).price.toFixed(2)}`
+                      : 'N/A'}
+                  </p>
+                  <p>Set: {(hoveredCard || selectedCard).set_name}</p>
+                  <a
+                    href={(hoveredCard || selectedCard).scryfall_uri}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline text-blue-400"
+                  >
+                    View on Scryfall
+                  </a>
+                </div>
+              </>
+            )}
 
-   <main className="flex min-h-screen w-full p-6 bg-transparent items-start justify-start gap-6">
+            <div className="text-white font-bold mt-15">{cardCountWidget}</div>
+          </div>
 
+          {/* RIGHT COLUMN - ADD CARD FORM + INVENTORY */}
+          <div className="w-full md:w-3/4 flex flex-col items-center">
+            {/* ADD CARD FORM */}
+            <form
+              onSubmit={handleAdd}
+              className="bg-opacity-60 rounded-lg p-4 shadow-lg mb-6 w-full max-w-3xl"
+            >
+              <div className="flex flex-wrap gap-4 justify-center items-end">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block mb-1">Card Name</label>
+                  <input
+                    type="text"
+                    value={cardName}
+                    onChange={(e) => setCardName(e.target.value)}
+                    className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
+                    placeholder="Black Lotus"
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="w-20">
+                  <label className="block mb-1">Qty</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      setQuantity(Number.isNaN(v) ? '' : v);
+                    }}
+                    className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
+                    required
+                  />
+                </div>
+                <button type="submit" className="p-0 border-none bg-transparent" aria-label="Add card">
+                  <img
+                    src="/assets/add_card.png"
+                    alt="Add Card"
+                    className="w-32 h-auto hover:opacity-80 transition"
+                  />
+                </button>
+              </div>
+            </form>
 
-  <div className="w-full flex flex-col md:flex-row md:items-start gap-1">
+            {/* CARD GRID */}
+            <div className="w-full max-w-6xl">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {loading ? (
+                  <p className="col-span-full text-center">Loading…</p>
+                ) : inventory.length === 0 ? (
+                  <p className="col-span-full text-center">No cards in inventory.</p>
+                ) : (
+                  inventoryGrid
+                )}
+              </div>
 
+              {/* PAGINATION */}
+              <div className="flex justify-center gap-4 mt-6">
+                <button
+                  onClick={handlePrev}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-indigo-600 rounded disabled:opacity-50"
+                  type="button"
+                >
+                  Previous
+                </button>
+                <span className="px-4 py-2 bg-gray-800 rounded">Page {currentPage}</span>
+                <button
+                  onClick={handleNext}
+                  disabled={inventory.length < pageSize}
+                  className="px-4 py-2 bg-indigo-600 rounded disabled:opacity-50"
+                  type="button"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
 
-{/* LEFT COLUMN - PREVIEW & CARD COUNT */}
-<div className="w-full md:w-1/4 md:text-left text-left img-left">
-  <h1 className="text-xl font-bold text-white-300 mb-4">
-    Card Preview
-  </h1>
-
-  {(hoveredCard || selectedCard) && (
-    <>
-      <img
-        src={(hoveredCard || selectedCard).image_url || '/placeholder.jpg'}
-        alt={(hoveredCard || selectedCard).name}
-        className="w-full h-auto object-contain rounded mb-2"
-      />
-      <div className="text-xs space-y-1">
-        <p className="font-bold">{(hoveredCard || selectedCard).name}</p>
-        <p>
-          Price:{' '}
-          {(hoveredCard || selectedCard).price > 0
-            ? `$${(hoveredCard || selectedCard).price.toFixed(2)}`
-            : 'N/A'}
-        </p>
-        <p>Set: {(hoveredCard || selectedCard).set_name}</p>
-        <a
-          href={(hoveredCard || selectedCard).scryfall_uri}
-          target="_blank"
-          rel="noreferrer"
-          className="underline text-blue-400"
-        >
-          View on Scryfall
-        </a>
-      </div>
-    </>
-  )}
-
-  <div className="text-white font-bold mt-15">
-    <CardCountDisplay user={user} refreshTrigger={refreshTrigger} />
-  </div>
-</div>
-
-
-    {/* RIGHT COLUMN - ADD CARD FORM + INVENTORY */}
-    <div className="w-full md:w-3/4 flex flex-col items-center">
-
-      {/* ADD CARD FORM */}
-      <form
-        onSubmit={handleAdd}
-        className="bg-opacity-60 rounded-lg p-4 shadow-lg mb-6 w-full max-w-3xl"
+      {/* RIGHT FILTER DRAWER (fixed) */}
+      <aside
+        className={`fixed top-0 right-0 h-full bg-[#1b2e4b] shadow-lg p-4 transition-transform duration-300 filterbar-container ${
+          showFilters ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        style={{ width: '260px', zIndex: 50 }}
       >
-        <div className="flex flex-wrap gap-4 justify-center items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block mb-1">Card Name</label>
+        {/* toggle handle */}
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className="absolute left-[-32px] top-4 bg-[#1b2e4b] p-2 rounded-full shadow filterbar-toggle"
+          aria-label="Toggle filters"
+          type="button"
+        >
+          {showFilters ? '◀' : '▶'}
+        </button>
+
+        <h2 className="text-lg mb-4 text-cyan-300 filterbar-title">Filters</h2>
+        <div className="space-y-3 text-sm filterbar-content">
+          <div>
+            <label className="block mb-1">Name contains</label>
             <input
               type="text"
-              value={cardName}
-              onChange={(e) => setCardName(e.target.value)}
-              className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
+              value={fName}
+              onChange={(e) => {
+                setFName(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
               placeholder="Black Lotus"
-              required
               autoComplete="off"
             />
           </div>
-          <div className="w-20">
-            <label className="block mb-1">Qty</label>
-            <input
-              type="number"
-              min="1"
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
-              required
-            />
+          <div>
+            <label className="block mb-1">Set</label>
+            <select
+              value={fSet}
+              onChange={(e) => {
+                setFSet(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-select"
+            >
+              <option value="">All sets</option>
+              {uniqueSets.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </div>
-          <button type="submit" className="p-0 border-none bg-transparent">
-  <img
-    src="/assets/add_card.png"
-    alt="Add Card"
-    className="w-32 h-auto hover:opacity-80 transition"
-  />
-</button>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block mb-1">Qty ≥</label>
+              <input
+                type="number"
+                min="0"
+                value={fMinQty}
+                onChange={(e) => {
+                  setFMinQty(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
+              />
+            </div>
+            <div>
+              <label className="block mb-1">Qty ≤</label>
+              <input
+                type="number"
+                min="0"
+                value={fMaxQty}
+                onChange={(e) => {
+                  setFMaxQty(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block mb-1">Price ≥</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={fMinPrice}
+                onChange={(e) => {
+                  setFMinPrice(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
+              />
+            </div>
+            <div>
+              <label className="block mb-1">Price ≤</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={fMaxPrice}
+                onChange={(e) => {
+                  setFMaxPrice(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
+              />
+            </div>
+          </div>
 
-        </div>
-      </form>
+          {/* --- Color filter (multi-select) --- */}
+          <div>
+            <label className="block mb-1">Colors</label>
+            <select
+              multiple
+              value={fColors}
+              onChange={(e) => {
+                const selectedOptions = Array.from(e.target.selectedOptions).map(
+                  (opt) => opt.value
+                );
+                setFColors(selectedOptions);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-28 filterbar-multiselect"
+            >
+              {colorOptions.map(({ code, label }) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {/* CARD GRID */}
-      <div className="w-full max-w-6xl">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-          {loading ? (
-            <p className="col-span-full text-center">Loading…</p>
-          ) : inventory.length === 0 ? (
-            <p className="col-span-full text-center">No cards in inventory.</p>
-          ) : (
-            inventoryGrid
-          )}
-        </div>
+          {/* --- Types filter changed to multi-select dropdown --- */}
+          <div>
+            <label className="block mb-1">Types</label>
+            <select
+              multiple
+              value={fTypes}
+              onChange={(e) => {
+                const selectedOptions = Array.from(e.target.selectedOptions).map(
+                  (opt) => opt.value
+                );
+                setFTypes(selectedOptions);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-32"
+              size={6}
+            >
+              {uniqueTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* PAGINATION */}
-        <div className="flex justify-center gap-4 mt-6">
           <button
-            onClick={handlePrev}
-            disabled={currentPage === 1}
-            className="px-4 py-2 bg-indigo-600 rounded disabled:opacity-50"
+            onClick={(e) => {
+              e.preventDefault();
+              resetAll();
+            }}
+            className="w-full bg-red-700 hover:bg-red-800 py-2 rounded text-center filterbar-reset-btn"
+            type="button"
           >
-            Previous
-          </button>
-          <span className="px-4 py-2 bg-gray-800 rounded">
-            Page {currentPage}
-          </span>
-          <button
-            onClick={handleNext}
-            disabled={inventory.length < pageSize}
-            className="px-4 py-2 bg-indigo-600 rounded disabled:opacity-50"
-          >
-            Next
+            Reset Filters
           </button>
         </div>
-      </div>
-    </div>
-  </div>
-</main>
-
-  
-      {/* RIGHT FILTER DRAWER (fixed) */}
-<aside
-  className={`fixed top-0 right-0 h-full bg-[#1b2e4b] shadow-lg p-4 transition-transform duration-300 filterbar-container ${
-    showFilters ? 'translate-x-0' : 'translate-x-full'
-  }`}
-  style={{ width: '260px', zIndex: 50 }}
->
-  {/* toggle handle */}
-  <button
-    onClick={() => setShowFilters((v) => !v)}
-    className="absolute left-[-32px] top-4 bg-[#1b2e4b] p-2 rounded-full shadow filterbar-toggle"
-    aria-label="Toggle filters"
-    type="button"
-  >
-    {showFilters ? '◀' : '▶'}
-  </button>
-
-  <h2 className="text-lg mb-4 text-cyan-300 filterbar-title">Filters</h2>
-  <div className="space-y-3 text-sm filterbar-content">
-    <div>
-      <label className="block mb-1">Name contains</label>
-      <input
-        type="text"
-        value={fName}
-        onChange={(e) => {
-          setFName(e.target.value);
-          setCurrentPage(1);
-        }}
-        className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
-        placeholder="Black Lotus"
-        autoComplete="off"
-      />
-    </div>
-    <div>
-      <label className="block mb-1">Set</label>
-      <select
-        value={fSet}
-        onChange={(e) => {
-          setFSet(e.target.value);
-          setCurrentPage(1);
-        }}
-        className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-select"
-      >
-        <option value="">All sets</option>
-        {uniqueSets.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
-    </div>
-    <div className="grid grid-cols-2 gap-2">
-      <div>
-        <label className="block mb-1">Qty ≥</label>
-        <input
-          type="number"
-          min="0"
-          value={fMinQty}
-          onChange={(e) => {
-            setFMinQty(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
-        />
-      </div>
-      <div>
-        <label className="block mb-1">Qty ≤</label>
-        <input
-          type="number"
-          min="0"
-          value={fMaxQty}
-          onChange={(e) => {
-            setFMaxQty(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
-        />
-      </div>
-    </div>
-    <div className="grid grid-cols-2 gap-2">
-      <div>
-        <label className="block mb-1">Price ≥</label>
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={fMinPrice}
-          onChange={(e) => {
-            setFMinPrice(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
-        />
-      </div>
-      <div>
-        <label className="block mb-1">Price ≤</label>
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={fMaxPrice}
-          onChange={(e) => {
-            setFMaxPrice(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 filterbar-input"
-        />
-      </div>
-    </div>
-
-    {/* --- Color filter (multi-select) --- */}
-    <div>
-      <label className="block mb-1">Colors</label>
-      <select
-        multiple
-        value={fColors}
-        onChange={(e) => {
-          const selectedOptions = Array.from(e.target.selectedOptions).map(
-            (opt) => opt.value
-          );
-          setFColors(selectedOptions);
-          setCurrentPage(1);
-        }}
-        className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-28 filterbar-multiselect"
-      >
-        {colorOptions.map(({ code, label }) => (
-          <option key={code} value={code}>
-            {label}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    {/* --- Types filter changed to multi-select dropdown --- */}
-    <div>
-      <label className="block mb-1">Types</label>
-      <select
-        multiple
-        value={fTypes}
-        onChange={(e) => {
-          const selectedOptions = Array.from(e.target.selectedOptions).map(
-            (opt) => opt.value
-          );
-          setFTypes(selectedOptions);
-          setCurrentPage(1);
-        }}
-        className="w-full bg-black text-white px-2 py-1 rounded border border-gray-600 h-32"
-        size={6} // shows multiple rows without scrolling if possible
-      >
-        {uniqueTypes.map((t) => (
-          <option key={t} value={t}>
-            {t}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    <button
-      onClick={(e) => {
-        e.preventDefault();
-        resetAll();
-      }}
-      className="w-full bg-red-700 hover:bg-red-800 py-2 rounded text-center filterbar-reset-btn"
-      type="button"
-    >
-      Reset Filters
-    </button>
-  </div>
-</aside>
+      </aside>
     </div>
   );
 }

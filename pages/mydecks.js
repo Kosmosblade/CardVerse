@@ -1,10 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from '../lib/supabase';  // adjust path if needed
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const cardsCache = {};
 
@@ -53,6 +50,7 @@ export default function MyDecks() {
     });
   }, []);
 
+  // Fetch decks from Supabase
   async function fetchDecks(userId) {
     setLoading(true);
     setError(null);
@@ -66,6 +64,7 @@ export default function MyDecks() {
       if (error) throw error;
 
       setDecks(data || []);
+
       if (data && data.length > 0) {
         fetchCommanderImages(data);
         fetchAllCardsImages(data);
@@ -77,53 +76,77 @@ export default function MyDecks() {
     }
   }
 
+  // Fetch commander images from Scryfall, avoiding duplicates
   async function fetchCommanderImages(decks) {
     const namesToFetch = decks
       .map((d) => d.commander_name)
       .filter((name) => name && !commanderImages[name]);
 
-    for (const name of namesToFetch) {
+    if (namesToFetch.length === 0) return;
+
+    // Fetch all commanders in parallel with Promise.all
+    const fetches = namesToFetch.map(async (name) => {
       try {
         const res = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
         const data = await res.json();
         if (data.object !== "error" && data.image_uris) {
-          setCommanderImages((prev) => ({
-            ...prev,
-            [name]: data.image_uris.normal || data.image_uris.small || "",
-          }));
+          return { name, url: data.image_uris.normal || data.image_uris.small || "" };
         }
       } catch {
-        // ignore errors for images
+        return null;
       }
+      return null;
+    });
+
+    const results = await Promise.all(fetches);
+    const newImages = {};
+    results.forEach((res) => {
+      if (res) newImages[res.name] = res.url;
+    });
+
+    if (Object.keys(newImages).length > 0) {
+      setCommanderImages((prev) => ({ ...prev, ...newImages }));
     }
   }
 
+  // Fetch card data for all cards in all decks, caching results
   async function fetchAllCardsImages(decks) {
     const allCardNames = new Set();
+
     decks.forEach((deck) => {
       try {
         const cards = JSON.parse(deck.decklist || "[]");
-        cards.forEach((c) => {
-          if (c.name && !cardsCache[c.name]) {
-            allCardNames.add(c.name);
+        cards.forEach(({ name }) => {
+          if (name && !cardsCache[name]) {
+            allCardNames.add(name);
           }
         });
       } catch {
-        // ignore malformed decklist JSON
+        // ignore malformed JSON
       }
     });
 
-    for (const name of allCardNames) {
-      try {
-        const res = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
-        const data = await res.json();
-        if (data.object !== "error") {
-          cardsCache[name] = data;
-          setDecks((prev) => [...prev]); // trigger rerender
+    if (allCardNames.size === 0) return;
+
+    // Fetch all card data in parallel with limit to avoid spamming Scryfall
+    const namesArray = Array.from(allCardNames);
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < namesArray.length; i += BATCH_SIZE) {
+      const batch = namesArray.slice(i, i + BATCH_SIZE);
+      const fetches = batch.map(async (name) => {
+        try {
+          const res = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
+          const data = await res.json();
+          if (data.object !== "error") {
+            cardsCache[name] = data;
+          }
+        } catch {
+          // ignore errors
         }
-      } catch {
-        // ignore fetch errors
-      }
+      });
+      await Promise.all(fetches);
+      // Trigger re-render after each batch
+      setDecks((prev) => [...prev]);
     }
   }
 
@@ -222,6 +245,7 @@ export default function MyDecks() {
     }, 0);
   }
 
+  // Renderers for each modal view mode:
   function renderTextView(cards) {
     const grouped = groupCardsByBroadType(cards);
     return (
@@ -419,13 +443,12 @@ export default function MyDecks() {
 
       <div className={`space-y-10 ${expandedDeckId !== null ? "blur-sm pointer-events-none select-none" : ""}`}>
         {decks.map((deck) => {
-          const cards = (() => {
-            try {
-              return JSON.parse(deck.decklist || "[]");
-            } catch {
-              return [];
-            }
-          })();
+          let cards = [];
+          try {
+            cards = JSON.parse(deck.decklist || "[]");
+          } catch {
+            cards = [];
+          }
           const deckCount = cards.reduce((sum, c) => sum + (c.count || 0), 0);
           const totalPrice = calculateDeckPrice(cards);
           const commanderImg = commanderImages[deck.commander_name] || null;
