@@ -220,11 +220,13 @@ export default function AdvancedSearch() {
 
     const pageUrl = typeof window !== 'undefined' ? window.location.href : router.pathname;
 
-    const price =
-      card.prices?.usd
-      || card.prices?.usd_foil
-      || card.prices?.usd_etched
-      || 'N/A';
+    const rawPrice =
+  card.prices?.usd ||
+  card.prices?.usd_foil ||
+  card.prices?.usd_etched;
+
+const price = rawPrice ? `$${parseFloat(rawPrice).toFixed(2)}` : 'N/A';
+
 
     const payload = {
       username: 'Conjuerers Crypt Bot',

@@ -71,6 +71,12 @@ export default function CardDetail() {
   // Reset flip on card change
   useEffect(() => setFlipped(false), [card, print]);
 
+  // Helper to get price string from price object (usd, usd_foil, usd_etched)
+  const getPriceString = (prices) => {
+    if (!prices) return null;
+    return prices.usd || prices.usd_foil || prices.usd_etched || null;
+  };
+
   // Add to inventory
   const handleAddToInventory = async () => {
     if (quantity < 1) {
@@ -128,7 +134,8 @@ export default function CardDetail() {
       const set_name = source.set_name || null;
       const scryfall_uri = source.scryfall_uri || null;
 
-      const rawPrice = source.prices?.usd || null;
+      // Correct price extraction with fallback
+      const rawPrice = getPriceString(source.prices);
       const price = rawPrice ? parseFloat(rawPrice) : 0;
 
       // Compose type_line for double-faced cards
@@ -245,8 +252,9 @@ export default function CardDetail() {
   const backImage =
     print?.card_faces?.[1]?.image_uris?.normal || card.card_faces?.[1]?.image_uris?.normal || null;
 
-  const rawPrice = print?.prices?.usd || card.prices?.usd;
-  const displayPrice = rawPrice ? `$${parseFloat(rawPrice).toFixed(2)}` : 'N/A';
+  // Use the same getPriceString helper to get display price with fallback
+  const displayRawPrice = getPriceString(print?.prices) || getPriceString(card.prices);
+  const displayPrice = displayRawPrice ? `$${parseFloat(displayRawPrice).toFixed(2)}` : 'N/A';
 
   const legalityList = Object.entries(card.legalities || {}).map(([fmt, st]) => ({
     format: fmt.charAt(0).toUpperCase() + fmt.slice(1),
