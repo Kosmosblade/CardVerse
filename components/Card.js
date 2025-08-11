@@ -37,10 +37,32 @@ const Card = memo(function Card({ card, count = 1, returnUrl }) {
   }
 
   const oracleText = card?.oracle_text || 'No oracle text available';
-  const price =
-    card?.prices?.usd && !isNaN(parseFloat(card.prices.usd))
-      ? parseFloat(card.prices.usd).toFixed(2)
-      : null;
+
+  // Improved price extraction logic:
+  // Try prices.usd, prices.usd_foil, prices.usd_etched, or card_faces prices if multi-faced card
+  let price = null;
+  if (card.prices) {
+    if (card.prices.usd && !isNaN(parseFloat(card.prices.usd))) {
+      price = parseFloat(card.prices.usd).toFixed(2);
+    } else if (card.prices.usd_foil && !isNaN(parseFloat(card.prices.usd_foil))) {
+      price = parseFloat(card.prices.usd_foil).toFixed(2);
+    } else if (card.prices.usd_etched && !isNaN(parseFloat(card.prices.usd_etched))) {
+      price = parseFloat(card.prices.usd_etched).toFixed(2);
+    }
+  }
+  // Check if card_faces have prices (for double-faced cards)
+  if (!price && card.card_faces?.length) {
+    for (const face of card.card_faces) {
+      if (face?.prices?.usd && !isNaN(parseFloat(face.prices.usd))) {
+        price = parseFloat(face.prices.usd).toFixed(2);
+        break;
+      } else if (face?.prices?.usd_foil && !isNaN(parseFloat(face.prices.usd_foil))) {
+        price = parseFloat(face.prices.usd_foil).toFixed(2);
+        break;
+      }
+    }
+  }
+
   const colors = card?.color_identity?.length
     ? card.color_identity.join(', ')
     : null;
@@ -84,8 +106,10 @@ const Card = memo(function Card({ card, count = 1, returnUrl }) {
           {card.set_name || 'Unknown Set'}
         </p>
 
-        {price !== null && (
+        {price !== null ? (
           <p className="mt-2 text-emerald-500 font-semibold text-lg">${price}</p>
+        ) : (
+          <p className="mt-2 text-gray-400 font-semibold text-lg">Price N/A</p>
         )}
 
         <div className="text-sm mt-1 text-white truncate w-full" title={card.mana_cost || 'N/A'}>

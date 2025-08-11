@@ -39,20 +39,17 @@ export default function AdvancedSearch() {
   const [hasMore, setHasMore] = useState(false);
   const [nextPageUrl, setNextPageUrl] = useState(null);
 
-  // Removed webhookLog and downloadUrl states and related logic since debug panel and download link are removed
-
   const resultsRef = useRef(null);
 
-  // pushLog still logs to console but no UI debug log now
+  // Logging helper
   const pushLog = (msg, obj = null) => {
     const line = `${new Date().toISOString()} - ${msg}${
       obj ? ' | ' + (typeof obj === 'string' ? obj : JSON.stringify(obj)) : ''
     }`;
     console.log(line, obj ?? '');
-    // No setWebhookLog call, debug panel removed
   };
 
-  // Restore state
+  // Restore saved state on mount
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -71,7 +68,7 @@ export default function AdvancedSearch() {
     }
   }, []);
 
-  // Save state including allCards
+  // Save state on relevant changes
   useEffect(() => {
     try {
       const stateToSave = { filters, results, allCards, currentPage, hasMore, nextPageUrl };
@@ -81,12 +78,14 @@ export default function AdvancedSearch() {
     }
   }, [filters, results, allCards, currentPage, hasMore, nextPageUrl]);
 
+  // Remove saved state on unload
   useEffect(() => {
     const handleBeforeUnload = () => sessionStorage.removeItem(STORAGE_KEY);
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  // Save state on route change start
   useEffect(() => {
     const handler = () => {
       try {
@@ -99,7 +98,7 @@ export default function AdvancedSearch() {
     return () => router.events.off('routeChangeStart', handler);
   }, [filters, results, allCards, currentPage, hasMore, nextPageUrl, router.events]);
 
-  // fetch sets
+  // Fetch all sets for filters
   useEffect(() => {
     async function fetchSets() {
       try {
@@ -120,6 +119,7 @@ export default function AdvancedSearch() {
 
   const handleFilterChange = (field, value) => setFilters((p) => ({ ...p, [field]: value }));
 
+  // Build Scryfall search query string from filters
   const buildQuery = (f) => {
     const q = [];
     if (f.name) q.push(`!"${f.name.trim()}"`);
@@ -153,13 +153,14 @@ export default function AdvancedSearch() {
     return q.join(' ');
   };
 
+  // Generate page url for Scryfall API
   const generatePageUrl = (pageNum) => {
     const q = buildQuery(filters).trim();
     if (!q) return null;
     return `https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&unique=cards&order=name&page=${pageNum}`;
   };
 
-  // fetch all pages recursively from Scryfall API
+  // Fetch all pages recursively from Scryfall
   const fetchAllPages = async (url, accumulated = []) => {
     pushLog('Fetching page', url);
     const r = await fetch(url);
@@ -176,7 +177,7 @@ export default function AdvancedSearch() {
     return newAccumulated;
   };
 
-  // fetch cards and accumulate all pages
+  // Fetch cards and accumulate all pages
   const fetchCardsAllPages = async () => {
     setLoading(true);
     setError(null);
@@ -213,11 +214,17 @@ export default function AdvancedSearch() {
     }
   };
 
-  // send webhook (same as before)
+  // Send Discord webhook with fallback price
   const sendDiscordWebhook = async (card) => {
     if (!card) return pushLog('sendDiscordWebhook called with no card');
 
     const pageUrl = typeof window !== 'undefined' ? window.location.href : router.pathname;
+
+    const price =
+      card.prices?.usd
+      || card.prices?.usd_foil
+      || card.prices?.usd_etched
+      || 'N/A';
 
     const payload = {
       username: 'Conjuerers Crypt Bot',
@@ -230,7 +237,7 @@ export default function AdvancedSearch() {
           fields: [
             { name: 'Set', value: card.set_name || 'N/A', inline: true },
             { name: 'Rarity', value: card.rarity || 'N/A', inline: true },
-            { name: 'Price (USD)', value: card.prices?.usd || 'N/A', inline: true },
+            { name: 'Price (USD)', value: price, inline: true },
             { name: 'Searched From', value: router.pathname || 'unknown', inline: true },
             { name: 'Page URL', value: pageUrl || 'unknown', inline: false },
           ],
@@ -273,7 +280,7 @@ export default function AdvancedSearch() {
     }
   };
 
-  // Pagination buttons now only change results slice, no fetching more pages
+  // Pagination handlers just slice cached allCards
   const handleNextPage = () => {
     const nextPage = currentPage + 1;
     const start = (nextPage - 1) * 60;
@@ -292,18 +299,20 @@ export default function AdvancedSearch() {
     setResults(allCards.slice(start, end));
   };
 
+  // Submit handler triggers fetch
   const handleSubmit = (e) => {
     e.preventDefault();
     fetchCardsAllPages();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Scroll to results on update
   useEffect(() => {
     if (results.length && resultsRef.current)
       resultsRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [results]);
 
-  // manual resend helper
+  // Manual webhook resend helper
   const handleResend = async (card) => {
     pushLog('Manual resend requested', { id: card.id, name: card.name });
     await sendDiscordWebhook(card);
@@ -349,8 +358,6 @@ export default function AdvancedSearch() {
         <SearchResults results={results} />
       </div>
 
-      {/* Removed download link section */}
-
       {results.length > 0 && (
         <>
           <div className="flex justify-center gap-4 mt-6">
@@ -370,12 +377,8 @@ export default function AdvancedSearch() {
               Next
             </button>
           </div>
-
-          
         </>
       )}
-
-      {/* Removed debug webhook log panel */}
     </div>
   );
 }

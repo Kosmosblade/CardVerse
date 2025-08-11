@@ -103,7 +103,7 @@ export default function Inventory() {
   const [hoveredCard, setHoveredCard] = useState(null);
   const hoveredCardRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 50;
+  const pageSize = 25;
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showFilters, setShowFilters] = useState(true);
   const router = useRouter();
@@ -560,99 +560,104 @@ const resetAll = () => {
   );
 
   return (
-    <div className="min-h-screen bg-cover bg-center text-black p-6">
-      <main className="flex min-h-screen w-full p-6 bg-transparent items-start justify-start gap-6">
-        <div className="w-full flex flex-col md:flex-row md:items-start gap-1">
-          {/* LEFT COLUMN - PREVIEW & CARD COUNT */}
-          <div className="w-full md:w-1/4 md:text-left text-left img-left">
-            <h1 className="text-xl font-bold text-white-300 mb-4">Card Preview</h1>
+  <div className="min-h-screen bg-cover bg-center text-black p-6">
+    <main className="flex min-h-screen w-full p-6 bg-transparent items-start justify-start gap-6">
+      <div className="w-full flex flex-col md:flex-row md:items-start gap-1">
 
-            {(hoveredCard || selectedCard) && (
-              <>
-                <img
-                  src={(hoveredCard || selectedCard).image_url || '/placeholder.jpg'}
-                  alt={(hoveredCard || selectedCard).name || 'Card preview'}
-                  className="w-full h-auto object-contain rounded mb-2"
+        {/* LEFT COLUMN - PREVIEW & CARD COUNT */}
+        <div
+          className="w-full md:w-1/4 md:text-left text-left img-left
+            sticky top-6 self-start" // <-- key sticky styles here
+          style={{ alignSelf: 'start' }}
+        >
+          <h1 className="text-xl font-bold text-white-300 mb-4">Card Preview</h1>
+
+          {(hoveredCard || selectedCard) && (
+            <>
+              <img
+                src={(hoveredCard || selectedCard).image_url || '/placeholder.jpg'}
+                alt={(hoveredCard || selectedCard).name || 'Card preview'}
+                className="w-full h-auto object-contain rounded mb-2"
+              />
+              <div className="text-xs space-y-1">
+                <p className="font-bold">{(hoveredCard || selectedCard).name}</p>
+                <p>
+                  Price:{' '}
+                  {(hoveredCard || selectedCard).price > 0
+                    ? `$${(hoveredCard || selectedCard).price.toFixed(2)}`
+                    : 'N/A'}
+                </p>
+                <p>Set: {(hoveredCard || selectedCard).set_name}</p>
+                <a
+                  href={(hoveredCard || selectedCard).scryfall_uri}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-blue-400"
+                >
+                  View on Scryfall
+                </a>
+              </div>
+            </>
+          )}
+
+          <div className="text-white font-bold mt-15">{cardCountWidget}</div>
+        </div>
+
+        {/* RIGHT COLUMN - ADD CARD FORM + INVENTORY */}
+        <div className="w-full md:w-3/4 flex flex-col items-center">
+          {/* ADD CARD FORM */}
+          <form
+            onSubmit={handleAdd}
+            className="bg-opacity-60 rounded-lg p-4 shadow-lg mb-6 w-full max-w-3xl"
+          >
+            <div className="flex flex-wrap gap-4 justify-center items-end">
+              <div className="flex-1 min-w-[200px]">
+                <label className="block mb-1">Card Name</label>
+                <input
+                  type="text"
+                  value={cardName}
+                  onChange={(e) => setCardName(e.target.value)}
+                  className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
+                  placeholder="Black Lotus"
+                  required
+                  autoComplete="off"
                 />
-                <div className="text-xs space-y-1">
-                  <p className="font-bold">{(hoveredCard || selectedCard).name}</p>
-                  <p>
-                    Price:{' '}
-                    {(hoveredCard || selectedCard).price > 0
-                      ? `$${(hoveredCard || selectedCard).price.toFixed(2)}`
-                      : 'N/A'}
-                  </p>
-                  <p>Set: {(hoveredCard || selectedCard).set_name}</p>
-                  <a
-                    href={(hoveredCard || selectedCard).scryfall_uri}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline text-blue-400"
-                  >
-                    View on Scryfall
-                  </a>
-                </div>
-              </>
-            )}
-
-            <div className="text-white font-bold mt-15">{cardCountWidget}</div>
-          </div>
-
-          {/* RIGHT COLUMN - ADD CARD FORM + INVENTORY */}
-          <div className="w-full md:w-3/4 flex flex-col items-center">
-            {/* ADD CARD FORM */}
-            <form
-              onSubmit={handleAdd}
-              className="bg-opacity-60 rounded-lg p-4 shadow-lg mb-6 w-full max-w-3xl"
-            >
-              <div className="flex flex-wrap gap-4 justify-center items-end">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="block mb-1">Card Name</label>
-                  <input
-                    type="text"
-                    value={cardName}
-                    onChange={(e) => setCardName(e.target.value)}
-                    className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
-                    placeholder="Black Lotus"
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="w-20">
-                  <label className="block mb-1">Qty</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={quantity}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10);
-                      setQuantity(Number.isNaN(v) ? '' : v);
-                    }}
-                    className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
-                    required
-                  />
-                </div>
-                <button type="submit" className="p-0 border-none bg-transparent" aria-label="Add card">
-                  <img
-                    src="/assets/add_card.png"
-                    alt="Add Card"
-                    className="w-32 h-auto hover:opacity-80 transition"
-                  />
-                </button>
               </div>
-            </form>
-
-            {/* CARD GRID */}
-            <div className="w-full max-w-6xl">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {loading ? (
-                  <p className="col-span-full text-center">Loading…</p>
-                ) : inventory.length === 0 ? (
-                  <p className="col-span-full text-center">No cards in inventory.</p>
-                ) : (
-                  inventoryGrid
-                )}
+              <div className="w-20">
+                <label className="block mb-1">Qty</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    setQuantity(Number.isNaN(v) ? '' : v);
+                  }}
+                  className="w-full bg-black text-white px-3 py-2 rounded border border-gray-600"
+                  required
+                />
               </div>
+              <button type="submit" className="p-0 border-none bg-transparent" aria-label="Add card">
+                <img
+                  src="/assets/add_card.png"
+                  alt="Add Card"
+                  className="w-32 h-auto hover:opacity-80 transition"
+                />
+              </button>
+            </div>
+          </form>
+
+          {/* CARD GRID */}
+          <div className="w-full max-w-6xl">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {loading ? (
+                <p className="col-span-full text-center">Loading…</p>
+              ) : inventory.length === 0 ? (
+                <p className="col-span-full text-center">No cards in inventory.</p>
+              ) : (
+                inventoryGrid
+              )}
+            </div>
 
               {/* PAGINATION */}
               <div className="flex justify-center gap-4 mt-6">
