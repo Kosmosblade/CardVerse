@@ -1,13 +1,14 @@
 // src/components/CardCountDisplay.js
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+
 export default function CardCountDisplay({ user, refreshTrigger }) {
-  const [cardStats, setCardStats] = useState({ current: 0, limit: 0 });
+  const [cardStats, setCardStats] = useState({ current: 0, limit: 'Unlimited' });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
-      setCardStats({ current: 0, limit: 0 });
+      setCardStats({ current: 0, limit: 'Unlimited' });
       setLoading(false);
       return;
     }
@@ -25,35 +26,22 @@ export default function CardCountDisplay({ user, refreshTrigger }) {
           console.error('Error fetching inventory count:', countError);
           setCardStats({
             current: 0,
-            limit: user?.role === 'free' ? 200 : 600,
+            limit: 'Unlimited',
           });
           setLoading(false);
           return;
         }
 
-        // Get max card limit from profiles table
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('max_card_limit')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError || !profileData) {
-          setCardStats({
-            current: count || 0,
-            limit: user?.role === 'free' ? 200 : 600,
-          });
-        } else {
-          setCardStats({
-            current: count || 0,
-            limit: profileData.max_card_limit,
-          });
-        }
+        // Ignore any profile-based limit — always set to Unlimited
+        setCardStats({
+          current: count || 0,
+          limit: 'Unlimited',
+        });
       } catch (err) {
         console.error('Unexpected error fetching card stats:', err);
         setCardStats({
           current: 0,
-          limit: user?.role === 'free' ? 200 : 600,
+          limit: 'Unlimited',
         });
       } finally {
         setLoading(false);

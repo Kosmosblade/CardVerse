@@ -256,7 +256,7 @@ export default function MyDecks() {
             <ul className="list-disc list-inside space-y-1">
               {cardsInGroup.map(({ name, count }) => (
                 <li key={name} className="text-white font-mono text-sm">
-                  {count} × {name}
+                  {count} {name}
                 </li>
               ))}
             </ul>
@@ -271,7 +271,7 @@ export default function MyDecks() {
       <div className="max-h-[70vh] overflow-y-auto font-mono text-xs text-indigo-200 space-y-1">
         {cards.map(({ name, count }, idx) => (
           <div key={`${name}-${idx}`}>
-            {count}× {name}
+            {count} {name}
           </div>
         ))}
       </div>
@@ -293,7 +293,7 @@ export default function MyDecks() {
               href={`/card/${encodeURIComponent(name)}`}
               className="relative flex flex-col items-center p-2 cursor-pointer hover:ring-2 hover:ring-indigo-400 transition"
               role="listitem"
-              title={`${count} × ${name}`}
+              title={`${count}  ${name}`}
             >
               {cardImage ? (
                 <>
@@ -306,7 +306,7 @@ export default function MyDecks() {
                   />
                   {count > 1 && (
                     <div className="absolute top-1 right-1 bg-indigo-700 bg-opacity-80 text-white text-xs font-bold px-1 rounded select-none pointer-events-none">
-                      x{count}
+                      {count}
                     </div>
                   )}
                 </>
@@ -340,7 +340,7 @@ export default function MyDecks() {
                     className="relative -ml-16 first:ml-0 hover:z-50 transition-all duration-300 cursor-pointer"
                     onMouseEnter={(e) => (e.currentTarget.style.zIndex = 1000)}
                     onMouseLeave={(e) => (e.currentTarget.style.zIndex = "")}
-                    title={`${count} × ${name}`}
+                    title={`${count}  ${name}`}
                   >
                     <Link href={`/card/${encodeURIComponent(name)}`}>
                       {cardImage ? (
@@ -354,7 +354,7 @@ export default function MyDecks() {
                           />
                           {count > 1 && (
                             <div className="absolute top-1 right-1 bg-indigo-700 bg-opacity-80 text-white text-xs font-bold px-1 rounded select-none pointer-events-none">
-                              x{count}
+                              {count}
                             </div>
                           )}
                         </>
@@ -385,7 +385,7 @@ export default function MyDecks() {
               key={`${name}-${idx}`}
               href={`/card/${encodeURIComponent(name)}`}
               className="relative cursor-pointer flex flex-col items-center"
-              title={`${count} × ${name}`}
+              title={`${count}  ${name}`}
             >
               {cardImage ? (
                 <>
@@ -408,7 +408,7 @@ export default function MyDecks() {
                 </div>
               )}
               <div className="text-center text-sm font-semibold mt-1 text-white whitespace-nowrap">
-                {count} × {name}
+                {count}  {name}
               </div>
             </Link>
           );
