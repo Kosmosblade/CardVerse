@@ -7,10 +7,19 @@ const Card = memo(function Card({ card, count = 1, returnUrl }) {
 
   useEffect(() => {
     if (card) {
-      const imageUrl =
-        card.image_uris?.normal ||
-        card.card_faces?.[0]?.image_uris?.normal ||
-        '/placeholder.jpg';
+      // Prefer specific print images if available
+      let imageUrl = null;
+
+      if (card.image_uris?.normal) {
+        imageUrl = card.image_uris.normal;
+      } else if (Array.isArray(card.card_faces)) {
+        // Combine first face normal
+        imageUrl = card.card_faces[0]?.image_uris?.normal;
+      }
+
+      // Fallback
+      if (!imageUrl) imageUrl = '/placeholder.jpg';
+
       setImageSrc(imageUrl);
     }
   }, [card]);
@@ -27,10 +36,16 @@ const Card = memo(function Card({ card, count = 1, returnUrl }) {
     );
   }
 
+  // Build link with exact print info
   const href = { pathname: `/card/${card.id}`, query: {} };
   if (returnUrl) href.query.returnUrl = returnUrl;
+  if (card.set && card.collector_number) {
+    href.query.set = card.set;
+    href.query.cn = card.collector_number;
+  }
+  if (card.finish) href.query.finish = card.finish;
 
-  const oracleText = card?.oracle_text || 'No oracle text available';
+  const oracleText = card?.oracle_text || card?.card_faces?.[0]?.oracle_text || 'No oracle text available';
 
   const getPrice = (prices) => {
     if (!prices) return null;

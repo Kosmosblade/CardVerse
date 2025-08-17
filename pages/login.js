@@ -103,7 +103,7 @@ export default function Login() {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-[#0b1f3a] text-white rounded-lg shadow-md border border-blue-800">
-      <h2 className="text-2xl text-center mb-4 style-romain font-bold text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">Log In</h2>
+      <h2 className="text-2xl text-center mb-4 font-bold text-amber-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.8)]">Log In</h2>
       <form onSubmit={handleLogin} className="flex flex-col gap-4">
         <input
           type="email"

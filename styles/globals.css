@@ -249,3 +249,67 @@ select:focus {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+
+/* === Price neon / pop styles === */
+.neon-price {
+  /* gradient text */
+  background: linear-gradient(90deg, #38bdf8 0%, #a78bfa 45%, #ff79c6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+
+  /* multi-layer glow / depth */
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.35),
+    0 8px 20px rgba(59, 130, 246, 0.28),
+    0 0 40px rgba(167, 139, 250, 0.12);
+
+  /* smoother rendering */
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  transition: transform 280ms ease, filter 350ms ease;
+  will-change: transform, filter;
+}
+
+/* subtle breathing glow */
+@keyframes neonPulse {
+  0% { filter: drop-shadow(0 0 8px rgba(59,130,246,0.20)) drop-shadow(0 0 18px rgba(167,139,250,0.06)); transform: translateY(0); }
+  50% { filter: drop-shadow(0 0 12px rgba(59,130,246,0.30)) drop-shadow(0 0 28px rgba(167,139,250,0.12)); transform: translateY(-2px); }
+  100% { filter: drop-shadow(0 0 8px rgba(203, 221, 3, 0.2)) drop-shadow(0 0 18px rgba(167,139,250,0.06)); transform: translateY(0); }
+}
+.neon-price { animation: neonPulse 2.5s ease-in-out infinite; }
+
+/* small rounded badge next to price */
+.price-badge {
+  background: linear-gradient(180deg, rgba(246, 59, 59, 0.14), rgba(167,139,250,0.06));
+  border: 1px solid rgba(255, 217, 0, 0.18);
+  color: #ffff00; /* pale blue */
+  box-shadow: 0 6px 18px rgba(59,130,246,0.08);
+  backdrop-filter: blur(6px);
+}
+
+/* animated glowing underline — thin neon line under price */
+.price-underline {
+  height: 4px;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(235, 248, 56, 0.18), rgba(167,139,250,0.12), rgba(255,121,198,0.12));
+  box-shadow: 0 6px 20px rgba(184, 190, 1, 0.12), inset 0 0 14px rgba(241, 250, 139, 0.479);
+  transform-origin: left center;
+  opacity: 0.95;
+  animation: underlineShift 5s linear infinite;
+}
+
+/* slow gradient drift */
+@keyframes underlineShift {
+  0% { background-position: 0% 80%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* smaller screens - scale down a little */
+@media (max-width: 640px) {
+  .neon-price { font-size: 1.5rem /* ~text-2xl */; }
+  .price-badge { padding: .25rem .6rem; font-size: .7rem; }
+}

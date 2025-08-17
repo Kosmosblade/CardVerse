@@ -10,6 +10,14 @@ const CardGrid = memo(({
   onCardFlip,
   loading = false
 }) => {
+  // Helper: pick the correct image for each card
+  const getCardImage = (card) => {
+    if (card.image_url) return card.image_url; // exact print from inventory
+    if (card.image_uris?.normal) return card.image_uris.normal; // standard Scryfall image
+    if (card.card_faces?.length) return card.card_faces[0].image_uris?.normal || '/placeholder.jpg'; // first face fallback
+    return '/placeholder.jpg';
+  };
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-4 justify-items-center">
       {loading ? (
@@ -20,7 +28,7 @@ const CardGrid = memo(({
         inventory.map((card) => (
           <CardItem
             key={card.id}
-            card={card}
+            card={{ ...card, imageSrc: getCardImage(card) }}
             onClick={onCardClick}
             onDelete={onCardDelete}
             onHover={onCardHover}

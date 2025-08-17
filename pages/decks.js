@@ -497,7 +497,6 @@ async function addToInventory() {
 }
 
 
-  // === handleParseClick ===
   async function handleParseClick() {
   if (!deckText.trim()) {
     setLogs(["Please enter a deck list first."]);
@@ -550,17 +549,17 @@ async function addToInventory() {
 
         try {
           // call AddToCatalog and pass count so it can set quantity
-          const res = await AddToCatalog(card, user.id, count);
-          if (!res || !res.success) {
-            setLogs((l) => [...l, `Catalog add failed for "${name}": ${res?.message || 'unknown error'}`]);
-          } else {
-            setLogs((l) => [...l, `Added ${name} to catalog.`]);
-          }
-        } catch (err) {
-          console.error("AddToCatalog threw:", err);
-          setLogs((l) => [...l, `Catalog add thrown for "${name}": ${err?.message || err}`]);
-        }
-      }
+           const res = await AddToCatalog(card, count);
+    if (!res?.success) {
+      setLogs((l) => [...l, `Failed to add "${name}" to catalog: ${res?.message || 'unknown error'}`]);
+    } else {
+      setLogs((l) => [...l, `Added ${name} to catalog.`]);
+    }
+  } catch (err) {
+    console.error("AddToCatalog error:", err);
+    setLogs((l) => [...l, `AddToCatalog threw for "${name}": ${err?.message || err}`]);
+  }
+}
 
       setMessage("Finished adding cards to catalog.");
     }
